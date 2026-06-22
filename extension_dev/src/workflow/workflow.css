@@ -11931,3 +11931,235 @@ video.wf-media-viewer-content {
 .wf-media-viewer-close:active {
   transform: scale(0.95);
 }
+
+/* ===================================================================
+   KudoFlow99 — Enhanced Visual Design
+   =================================================================== */
+
+/* Node card: premium gradient + refined depth */
+.df-node {
+  background: linear-gradient(165deg, #1f1f2a 0%, #161618 100%);
+  border: 1.5px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.df-node:hover {
+  border-color: rgba(255,255,255,0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* Colored accent bar at top of each node card — quick visual identity */
+.df-node::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  pointer-events: none;
+  z-index: 1;
+  background: rgba(255,255,255,0.08);
+}
+.df-node[data-node-type="generate"]::before    { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+.df-node[data-node-type="chatgpt"]::before     { background: linear-gradient(90deg, #059669, #34d399); }
+.df-node[data-node-type="grok"]::before        { background: linear-gradient(90deg, #7c3aed, #c084fc); }
+.df-node[data-node-type="web_import"]::before  { background: linear-gradient(90deg, #047857, #34d399); }
+.df-node[data-node-type="text"]::before        { background: linear-gradient(90deg, #4338ca, #a78bfa); }
+.df-node[data-node-type="prompt"]::before      { background: linear-gradient(90deg, #4338ca, #a78bfa); }
+.df-node[data-node-type="image"]::before       { background: linear-gradient(90deg, #be185d, #f472b6); }
+.df-node[data-node-type="upscale"]::before     { background: linear-gradient(90deg, #15803d, #4ade80); }
+.df-node[data-node-type="download"]::before    { background: linear-gradient(90deg, #0369a1, #38bdf8); }
+.df-node[data-node-type="delay"]::before       { background: linear-gradient(90deg, #b45309, #fbbf24); }
+.df-node[data-node-type="telegram"]::before    { background: linear-gradient(90deg, #005f99, #29b6f6); }
+.df-node[data-node-type="angles"]::before      { background: linear-gradient(90deg, #6d28d9, #c084fc); }
+.df-node[data-node-type="effects"]::before     { background: linear-gradient(90deg, #b45309, #fbbf24); }
+.df-node[data-node-type="note"]::before        { background: linear-gradient(90deg, #374151, #9ca3af); }
+
+/* Header: extra top padding to clear accent bar + subtle glassy tint */
+.df-node-header {
+  padding-top: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+}
+
+/* Icons: slightly larger + more visible radius */
+.df-node-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+/* Node title: slightly bolder for readability */
+.df-node-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Drawflow node hover: warmer glow */
+.drawflow .drawflow-node:hover {
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.4);
+}
+
+/* Status dot: small pulsing corner indicator for running state */
+.df-node-status {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #161618;
+  background: transparent;
+  pointer-events: none;
+  z-index: 20;
+}
+.df-node-status.running {
+  background: #22c55e;
+  animation: kudo99-status-ping 1.4s ease-in-out infinite;
+}
+.df-node-status.success { background: #22c55e; }
+.df-node-status.error   { background: #ef4444; }
+
+@keyframes kudo99-status-ping {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.7); }
+  60%       { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+}
+
+/* Node body: slightly cooler bg for contrast with header */
+.df-node-body {
+  background: rgba(0,0,0,0.1);
+}
+
+/* ── Node palette: polished hover with slide accent ─────────────── */
+.node-palette-item {
+  background: linear-gradient(90deg, rgba(255,255,255,0.025) 0%, transparent 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.node-palette-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--primary, #ccff00);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border-radius: 0;
+}
+.node-palette-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.15);
+  transform: translateX(3px);
+  box-shadow: -2px 0 0 0 var(--primary, #ccff00);
+}
+.node-palette-item-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+.node-palette-item-name {
+  font-weight: 500;
+}
+
+/* ── Node palette header: gradient + uppercase brand ────────────── */
+.node-palette-header {
+  background: linear-gradient(180deg, rgba(204,255,0,0.05) 0%, transparent 100%);
+  border-bottom-color: rgba(204,255,0,0.12);
+  color: var(--primary, #ccff00);
+}
+.node-palette {
+  background: linear-gradient(180deg, #1a1a22 0%, var(--surface) 100%);
+}
+
+/* ── Canvas: refined dark grid for clarity ──────────────────────── */
+.drawflow {
+  background-color: #12121a;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 24px 24px, 6px 6px;
+}
+
+/* ── Quick-run button: green highlight ──────────────────────────── */
+.df-hover-btn[data-action="run-node"] {
+  background: rgba(34,197,94,0.12);
+  color: #22c55e;
+  border-radius: 8px;
+}
+.df-hover-btn[data-action="run-node"]:hover {
+  background: rgba(34,197,94,0.22);
+  color: #4ade80;
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.35);
+}
+
+/* ── Connection tooltip ─────────────────────────────────────────── */
+.kudo99-conn-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(20,20,28,0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e2e2ea;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  transition: opacity 0.1s ease;
+}
+
+/* ── Word count badge in output labels ──────────────────────────── */
+.kudo99-word-count {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* ── AI provider tags in template cards ─────────────────────────── */
+.wf-template-ai-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.wf-template-ai-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 40%, transparent);
+  background: color-mix(in srgb, var(--tag-color) 12%, transparent);
+  color: var(--tag-color);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ── Template category: colored chip ───────────────────────────── */
+.wf-template-category {
+  background: rgba(204,255,0,0.1);
+  border: 1px solid rgba(204,255,0,0.2);
+  color: #ccff00;
+  border-radius: 20px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+/* ── Empty state demo diagram ───────────────────────────────────── */
+.kudo99-empty-diagram {
+  opacity: 0.85;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+}

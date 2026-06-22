@@ -558,6 +558,7 @@ const NodeTemplates = {
                   </svg>
                   <span class="df-ai-output-label-text">${this.escapeHtml(window.I18n?.t('node.aiOutputLabel') || 'AI Output')}</span>
                   <span class="df-ai-output-provider">${this.escapeHtml(providerLabel)}</span>
+                  <span class="kudo99-word-count">${resultText.trim().split(/\s+/).filter(Boolean).length} từ</span>
                 </div>
                 <div class="df-ai-output-text">${this.formatPromptWithMentions(resultText)}</div>
               </div>
@@ -638,6 +639,7 @@ const NodeTemplates = {
                     <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="8" width="10" height="8" rx="1"/>
                   </svg>
                   <span class="df-ai-output-label-text">${this.escapeHtml(extractOutputLabel)}</span>
+                  <span class="kudo99-word-count">${extractResultText.trim().split(/\s+/).filter(Boolean).length} từ</span>
                 </div>
                 <div class="df-ai-output-text">${this.escapeHtml(extractResultText)}</div>
               </div>
@@ -704,6 +706,7 @@ const NodeTemplates = {
                     <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                   </svg>
                   <span class="df-ai-output-label-text">${window.I18n?.t('node.webImportOutputLabel') || 'Kết quả'}</span>
+                  <span class="kudo99-word-count">${resultText.trim().split(/\s+/).filter(Boolean).length} từ</span>
                 </div>
                 <div class="df-ai-output-text">${this.escapeHtml(resultText)}</div>
               </div>
