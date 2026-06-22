@@ -1,0 +1,23 @@
+# Environment & secrets
+server/.env
+server/.env.*
+*.env
+
+# Node modules
+node_modules/
+server/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
+
+# Claude Code local settings
+.claude/settings.local.json
