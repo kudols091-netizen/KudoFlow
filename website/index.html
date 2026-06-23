@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KudoSkill — Workflow AI đơn giản nhất</title>
+  <meta name="description" content="Kéo thả node, kết nối AI, tự động hóa mọi tác vụ — không cần code. Cài đặt miễn phí ngay hôm nay." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Khi có link Chrome Web Store, chỉ cần thay đổi dòng này:
+    const CWS_URL = '#coming-soon'; // TODO: thay bằng link thật sau khi publish
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-cws-link]').forEach(el => {
+        el.href = CWS_URL;
+        if (CWS_URL === '#coming-soon') {
+          el.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Extension sắp ra mắt! Để lại email để nhận thông báo sớm nhất.');
+          });
+        }
+      });
+    });
+  </script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lime: { DEFAULT: '#ccff00', dark: '#a3cc00' },
+            surface: { DEFAULT: '#111118', 1: '#16161f', 2: '#1c1c27', 3: '#22222f' },
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          animation: {
+            'fade-up': 'fadeUp 0.6s ease forwards',
+            'pulse-slow': 'pulse 3s ease-in-out infinite',
+            'float': 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            fadeUp: { '0%': { opacity: 0, transform: 'translateY(24px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            float: { '0%,100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-12px)' } },
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #111118; color: #e2e2ea; }
+    ::selection { background: rgba(204,255,0,0.25); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #111118; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* Glow */
+    .glow-lime { box-shadow: 0 0 40px rgba(204,255,0,0.15), 0 0 80px rgba(204,255,0,0.06); }
+    .glow-lime-sm { box-shadow: 0 0 12px rgba(204,255,0,0.3); }
+    .text-gradient { background: linear-gradient(135deg, #ffffff 0%, #ccff00 50%, #84cc16 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .text-gradient-subtle { background: linear-gradient(135deg, #e2e2ea 0%, rgba(204,255,0,0.85) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* Hero grid background */
+    .hero-bg {
+      background-color: #111118;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(204,255,0,0.12) 0%, transparent 70%),
+        radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px;
+    }
+
+    /* Card border glow on hover */
+    .card-hover { transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s; }
+    .card-hover:hover { border-color: rgba(204,255,0,0.25); box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(204,255,0,0.08); transform: translateY(-3px); }
+
+    /* Pricing card active */
+    .pricing-popular { background: linear-gradient(135deg, rgba(204,255,0,0.08) 0%, rgba(132,204,22,0.04) 100%); }
+
+    /* Animated node demo */
+    .node-demo { animation: float 6s ease-in-out infinite; }
+    .node-demo-2 { animation: float 6s ease-in-out infinite; animation-delay: -2s; }
+    .node-demo-3 { animation: float 6s ease-in-out infinite; animation-delay: -4s; }
+
+    /* Step connector */
+    .step-line::after {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: calc(50% + 28px);
+      width: calc(100% - 56px);
+      height: 1px;
+      background: linear-gradient(90deg, rgba(204,255,0,0.4), rgba(204,255,0,0.1));
+    }
+
+    /* Nav blur */
+    .nav-glass { background: rgba(17,17,24,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+    .animate-on-scroll { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+
+<body class="font-sans antialiased">
+
+  <!-- ===== NAVBAR ===== -->
+  <header class="nav-glass fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06]">
+    <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2.5 group">
+        <div class="w-8 h-8 rounded-lg bg-[#ccff00] flex items-center justify-center glow-lime-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 8l4-4 4 4M7 4v10M13 16l4 4 4-4M17 20V10" stroke="#111118" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="font-bold text-lg text-white tracking-tight">KudoSkill</span>
+      </a>
+
+      <!-- Nav links -->
+      <nav class="hidden md:flex items-center gap-7 text-sm text-white/60 font-medium">
+        <a href="#features" class="hover:text-white transition-colors">Tính năng</a>
+        <a href="#how" class="hover:text-white transition-colors">Cách dùng</a>
+        <a href="#pricing" class="hover:text-white transition-colors">Bảng giá</a>
+        <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+      </nav>
+
+      <!-- CTA -->
+      <div class="flex items-center gap-3">
+        <a href="#" class="hidden sm:block text-sm font-medium text-white/60 hover:text-white transition-colors">Đăng nhập</a>
+        <a href="#" class="text-sm font-semibold bg-[#ccff00] text-[#111118] px-4 py-2 rounded-lg hover:bg-[#d9ff33] transition-colors glow-lime-sm">
+          Dùng miễn phí
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero-bg pt-32 pb-24 px-5 overflow-hidden">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col items-center text-center">
+
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 bg-[#ccff00]/10 border border-[#ccff00]/20 rounded-full px-4 py-1.5 mb-8 text-xs font-semibold text-[#ccff00] tracking-wide uppercase">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#ccff00] animate-pulse-slow"></span>
+          Chrome Extension · Miễn phí 7 ngày
+        </div>
+
+        <!-- Headline -->
+        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6 max-w-4xl">
+          <span class="text-white">Workflow AI</span><br/>
+          <span class="text-gradient">đơn giản nhất</span><br/>
+          <span class="text-white/80 text-3xl sm:text-4xl md:text-5xl font-bold">cho mọi việc</span>
+        </h1>
+
+        <!-- Sub -->
+        <p class="text-base sm:text-lg md:text-xl text-white/55 max-w-2xl leading-relaxed mb-10">
+          Kéo thả node, kết nối ChatGPT · Grok · Gemini, tự động hóa mọi tác vụ —<br class="hidden sm:block"/>
+          <strong class="text-white/70 font-medium">không cần code, không cần cấu hình phức tạp.</strong>
+        </p>
+
+        <!-- CTA buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-16">
+          <a href="#" data-cws-link class="inline-flex items-center gap-2.5 bg-[#ccff00] text-[#111118] font-bold text-base px-7 py-3.5 rounded-xl hover:bg-[#d9ff33] transition-all glow-lime group">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="group-hover:scale-110 transition-transform">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#111118"/>
+              <path d="M10 8l6 4-6 4V8z" fill="#ccff00"/>
+            </svg>
+            Cài đặt Chrome Extension
+          </a>
+          <a href="#how" class="inline-flex items-center gap-2.5 bg-white/[0.06] border border-white/10 text-white font-semibold text-base px-7 py-3.5 rounded-xl hover:bg-white/[0.1] hover:border-white/20 transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+            </svg>
+            Xem demo
+          </a>
+        </div>
+
+        <!-- Social proof -->
+        <div class="flex flex-col sm:flex-row items-center gap-5 text-sm text-white/40">
+          <div class="flex items-center gap-2">
+            <div class="flex -space-x-2">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-2 border-[#111118] flex items-center justify-center text-[10px] font-bold text-white">K</div>
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 border-2 border-[#111118] flex items-center justify-center text-[10px] font-bold text-white">A</div>
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-green-400 to-green-600 border-2 border-[#111118] flex items-center justify-center text-[10px] font-bold text-white">T</div>
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 border-2 border-[#111118] flex items-center justify-center text-[10px] font-bold text-white">M</div>
+            </div>
+            <span><strong class="text-white/70">1,200+</strong> người dùng</span>
+          </div>
+          <span class="hidden sm:block text-white/20">·</span>
+          <div class="flex items-center gap-1.5">
+            <div class="flex">
+              <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            </div>
+            <span><strong class="text-white/70">4.9/5</strong> · 200 đánh giá</span>
+          </div>
+        </div>
+
+        <!-- Hero visual — node canvas mockup -->
+        <div class="mt-16 w-full max-w-4xl mx-auto relative">
+          <div class="absolute inset-0 rounded-2xl bg-gradient-to-b from-[#ccff00]/5 to-transparent pointer-events-none"></div>
+          <div class="bg-[#16161f] border border-white/[0.08] rounded-2xl overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.7)]">
+            <!-- Window bar -->
+            <div class="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.06] bg-[#111118]/60">
+              <div class="flex gap-1.5">
+                <div class="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
+                <div class="w-3 h-3 rounded-full bg-[#febc2e]"></div>
+                <div class="w-3 h-3 rounded-full bg-[#28c840]"></div>
+              </div>
+              <div class="flex-1 flex justify-center">
+                <div class="text-xs text-white/30 bg-white/[0.04] px-4 py-1 rounded-md">KudoSkill Workflow Builder</div>
+              </div>
+            </div>
+            <!-- Canvas mockup -->
+            <div class="relative h-72 sm:h-96 bg-[#12121a] overflow-hidden"
+                 style="background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px;">
+
+              <!-- Connection lines (SVG) -->
+              <svg class="absolute inset-0 w-full h-full" style="pointer-events:none">
+                <defs>
+                  <linearGradient id="conn1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#ccff00" stop-opacity="0.6"/>
+                    <stop offset="100%" stop-color="#22c55e" stop-opacity="0.6"/>
+                  </linearGradient>
+                  <linearGradient id="conn2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#22c55e" stop-opacity="0.6"/>
+                    <stop offset="100%" stop-color="#a855f7" stop-opacity="0.6"/>
+                  </linearGradient>
+                </defs>
+                <!-- Line 1: Prompt → Generate -->
+                <path d="M 220 120 C 270 120, 290 155, 340 155" stroke="url(#conn1)" stroke-width="2" fill="none" stroke-dasharray="4 2"/>
+                <!-- Line 2: Generate → Save -->
+                <path d="M 560 155 C 610 155, 630 215, 680 215" stroke="url(#conn2)" stroke-width="2" fill="none" stroke-dasharray="4 2"/>
+              </svg>
+
+              <!-- Node 1: Prompt -->
+              <div class="node-demo absolute top-14 left-10 sm:left-16 w-44 bg-[#1f1f2a] border border-white/10 rounded-xl overflow-hidden shadow-xl" style="border-top: 3px solid #ccff00">
+                <div class="px-3 py-2.5 flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-md bg-[#ccff00]/15 flex items-center justify-center text-[#ccff00]">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </div>
+                  <span class="text-xs font-semibold text-white/80">Nhập Prompt</span>
+                </div>
+                <div class="px-3 pb-3">
+                  <div class="text-[10px] text-white/40 bg-[#111118] rounded-lg px-2.5 py-2 leading-relaxed">
+                    Tạo caption cho ảnh sản phẩm phong cách minimalist...
+                  </div>
+                </div>
+              </div>
+
+              <!-- Node 2: AI Generate (center) -->
+              <div class="node-demo-2 absolute top-28 left-1/2 -translate-x-1/2 w-52 bg-[#1f1f2a] border border-white/10 rounded-xl overflow-hidden shadow-xl" style="border-top: 3px solid #059669">
+                <div class="px-3 py-2.5 flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-md bg-green-500/15 flex items-center justify-center text-green-400">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m12 8-2 4h4l-2 4"/></svg>
+                  </div>
+                  <span class="text-xs font-semibold text-white/80">ChatGPT</span>
+                  <span class="ml-auto text-[9px] text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <span class="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
+                    Đang chạy
+                  </span>
+                </div>
+                <div class="px-3 pb-3">
+                  <div class="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div class="h-full w-3/5 bg-gradient-to-r from-green-500 to-green-400 rounded-full" style="animation: pulse 1.5s ease-in-out infinite"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Node 3: Output/Save -->
+              <div class="node-demo-3 absolute top-40 right-10 sm:right-16 w-44 bg-[#1f1f2a] border border-white/10 rounded-xl overflow-hidden shadow-xl" style="border-top: 3px solid #a855f7">
+                <div class="px-3 py-2.5 flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-md bg-purple-500/15 flex items-center justify-center text-purple-400">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </div>
+                  <span class="text-xs font-semibold text-white/80">Lưu kết quả</span>
+                  <span class="ml-auto text-[9px] text-green-400 font-semibold">✓ Xong</span>
+                </div>
+                <div class="px-3 pb-3">
+                  <div class="text-[10px] text-white/50 leading-relaxed">
+                    "Vẻ đẹp tinh tế trong từng đường nét. Sản phẩm..."
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LOGO BAR ===== -->
+  <section class="py-10 border-y border-white/[0.05] bg-[#111118]">
+    <div class="max-w-5xl mx-auto px-5">
+      <p class="text-center text-xs font-semibold text-white/25 uppercase tracking-widest mb-7">Tích hợp với các AI hàng đầu</p>
+      <div class="flex flex-wrap justify-center items-center gap-8 sm:gap-12">
+        <div class="flex items-center gap-2 text-white/35 hover:text-white/60 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387 2.019-1.168a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.41-.663zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>
+          <span class="text-sm font-semibold">ChatGPT</span>
+        </div>
+        <div class="flex items-center gap-2 text-white/35 hover:text-white/60 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="text-sm font-semibold">Grok</span>
+        </div>
+        <div class="flex items-center gap-2 text-white/35 hover:text-white/60 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0zm-.04 19.6c-3.847 0-6.413-2.847-6.413-6.413 0-3.567 2.566-6.413 6.413-6.413 1.72 0 3.227.627 4.32 1.66l-1.753 1.753C13.82 9.54 13 9.173 11.96 9.173c-2.567 0-4.24 2.007-4.24 4.014 0 2.006 1.673 4.013 4.24 4.013 2.34 0 3.567-1.34 3.753-2.5h-3.753v-2.34h6.2c.066.373.1.74.1 1.12 0 3.48-2.327 5.92-6.3 5.92z"/></svg>
+          <span class="text-sm font-semibold">Gemini</span>
+        </div>
+        <div class="flex items-center gap-2 text-white/35 hover:text-white/60 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span class="text-sm font-semibold">Google Flow</span>
+        </div>
+        <div class="flex items-center gap-2 text-white/35 hover:text-white/60 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span class="text-sm font-semibold">Chrome Extension</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features" class="py-24 px-5">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16 animate-on-scroll">
+        <div class="inline-block text-xs font-bold text-[#ccff00] uppercase tracking-widest mb-4 bg-[#ccff00]/10 px-3 py-1 rounded-full">Tính năng</div>
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">Mọi thứ bạn cần<br/><span class="text-gradient-subtle">trong một extension</span></h2>
+        <p class="text-white/50 text-lg max-w-xl mx-auto">Từ kéo thả node đến chạy tự động — KudoSkill làm tất cả mà không cần bạn viết một dòng code nào.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <!-- Feature 1 -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
+          <div class="w-11 h-11 rounded-xl bg-[#ccff00]/10 border border-[#ccff00]/20 flex items-center justify-center mb-5 text-[#ccff00]">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 17.5L21 21M14 17.5h3.5v3.5"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Visual Workflow Builder</h3>
+          <p class="text-white/50 text-sm leading-relaxed">Kéo thả node trực quan. Kết nối AI bằng mũi tên. Không cần học cú pháp hay cấu hình phức tạp.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
+          <div class="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5 text-blue-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-2 4h4l-2 4"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Đa AI Provider</h3>
+          <p class="text-white/50 text-sm leading-relaxed">Tích hợp ChatGPT, Grok, Gemini, Google Flow trong cùng một workflow. Dùng điểm mạnh của từng AI.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
+          <div class="w-11 h-11 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5 text-green-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Chạy tự động 1 click</h3>
+          <p class="text-white/50 text-sm leading-relaxed">Nhấn Run — toàn bộ chuỗi node tự chạy theo thứ tự, kết quả truyền từ node này sang node khác.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
+          <div class="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-5 text-purple-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Template có sẵn</h3>
+          <p class="text-white/50 text-sm leading-relaxed">20+ workflow template cho content, marketing, SEO, ecommerce. Load và chạy trong vòng 30 giây.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
+          <div class="w-11 h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-5 text-orange-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Export kết quả</h3>
+          <p class="text-white/50 text-sm leading-relaxed">Tải kết quả về dạng text, ảnh (2K/4K). Copy one-click. Chia sẻ trực tiếp từ canvas.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="bg-[#16161f] border border-[#ccff00]/15 rounded-2xl p-6 card-hover animate-on-scroll bg-gradient-to-br from-[#ccff00]/5 to-transparent">
+          <div class="w-11 h-11 rounded-xl bg-[#ccff00]/10 border border-[#ccff00]/25 flex items-center justify-center mb-5 text-[#ccff00]">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Hoạt động mọi nơi</h3>
+          <p class="text-white/50 text-sm leading-relaxed">Chrome Extension chạy song song với mọi website. Sidebar gọn gàng, không chiếm không gian làm việc.</p>
+          <div class="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#ccff00]">
+            Cài miễn phí
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section id="how" class="py-24 px-5 bg-[#0e0e16]">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16 animate-on-scroll">
+        <div class="inline-block text-xs font-bold text-[#ccff00] uppercase tracking-widest mb-4 bg-[#ccff00]/10 px-3 py-1 rounded-full">Cách hoạt động</div>
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">Bắt đầu trong<br/><span class="text-gradient-subtle">dưới 2 phút</span></h2>
+        <p class="text-white/50 text-lg max-w-xl mx-auto">4 bước đơn giản từ cài đặt đến có kết quả AI đầu tiên.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <div class="relative text-center animate-on-scroll">
+          <div class="w-14 h-14 rounded-2xl bg-[#ccff00] mx-auto mb-5 flex items-center justify-center shadow-[0_0_24px_rgba(204,255,0,0.3)]">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111118" stroke-width="2.2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+            </svg>
+          </div>
+          <div class="absolute top-7 left-[calc(50%+28px)] right-0 h-[1px] bg-gradient-to-r from-[#ccff00]/40 to-transparent hidden lg:block"></div>
+          <div class="text-xs font-bold text-[#ccff00] mb-2 tracking-wide">BƯỚC 1</div>
+          <h3 class="text-base font-bold text-white mb-2">Cài Extension</h3>
+          <p class="text-sm text-white/45 leading-relaxed">Thêm KudoSkill từ Chrome Web Store. Mất chưa đến 30 giây.</p>
+        </div>
+
+        <div class="relative text-center animate-on-scroll">
+          <div class="w-14 h-14 rounded-2xl bg-[#1c1c27] border border-white/10 mx-auto mb-5 flex items-center justify-center">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#84cc16" stroke-width="2" stroke-linecap="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <div class="absolute top-7 left-[calc(50%+28px)] right-0 h-[1px] bg-gradient-to-r from-[#84cc16]/30 to-transparent hidden lg:block"></div>
+          <div class="text-xs font-bold text-[#ccff00]/70 mb-2 tracking-wide">BƯỚC 2</div>
+          <h3 class="text-base font-bold text-white mb-2">Chọn Template</h3>
+          <p class="text-sm text-white/45 leading-relaxed">Chọn 1 trong 20+ template hoặc tạo workflow trống.</p>
+        </div>
+
+        <div class="relative text-center animate-on-scroll">
+          <div class="w-14 h-14 rounded-2xl bg-[#1c1c27] border border-white/10 mx-auto mb-5 flex items-center justify-center">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#84cc16" stroke-width="2" stroke-linecap="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h3.5v3.5M17.5 14H21v3.5"/>
+            </svg>
+          </div>
+          <div class="absolute top-7 left-[calc(50%+28px)] right-0 h-[1px] bg-gradient-to-r from-[#84cc16]/30 to-transparent hidden lg:block"></div>
+          <div class="text-xs font-bold text-[#ccff00]/70 mb-2 tracking-wide">BƯỚC 3</div>
+          <h3 class="text-base font-bold text-white mb-2">Kéo thả Node</h3>
+          <p class="text-sm text-white/45 leading-relaxed">Thêm node AI, nhập prompt, kết nối chúng bằng mũi tên.</p>
+        </div>
+
+        <div class="relative text-center animate-on-scroll">
+          <div class="w-14 h-14 rounded-2xl bg-[#1c1c27] border border-white/10 mx-auto mb-5 flex items-center justify-center">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div class="text-xs font-bold text-[#ccff00]/70 mb-2 tracking-wide">BƯỚC 4</div>
+          <h3 class="text-base font-bold text-white mb-2">Chạy & Lấy kết quả</h3>
+          <p class="text-sm text-white/45 leading-relaxed">Nhấn Run — AI tự chạy và trả kết quả trong vài giây.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRICING ===== -->
+  <section id="pricing" class="py-24 px-5">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-14 animate-on-scroll">
+        <div class="inline-block text-xs font-bold text-[#ccff00] uppercase tracking-widest mb-4 bg-[#ccff00]/10 px-3 py-1 rounded-full">Bảng giá</div>
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">Giá cả minh bạch<br/><span class="text-gradient-subtle">không ẩn phí</span></h2>
+        <p class="text-white/50 text-lg max-w-xl mx-auto">Dùng thử 7 ngày miễn phí. Không cần thẻ tín dụng.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-6">
+
+        <!-- Free Trial -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-7 flex flex-col animate-on-scroll card-hover">
+          <div class="mb-6">
+            <div class="text-sm font-bold text-white/50 mb-2 uppercase tracking-wide">Free Trial</div>
+            <div class="flex items-end gap-1.5 mb-1">
+              <span class="text-4xl font-black text-white">0đ</span>
+            </div>
+            <div class="text-sm text-white/40">7 ngày đầy đủ tính năng</div>
+          </div>
+          <ul class="space-y-3 text-sm text-white/60 flex-1 mb-8">
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Toàn bộ tính năng Pro</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Tất cả AI providers</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>20+ workflow templates</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-white/20 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="text-white/30">Priority support</span></li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-white/20 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="text-white/30">Team workspace</span></li>
+          </ul>
+          <a href="#" class="w-full py-3 rounded-xl border border-white/15 text-white/70 font-semibold text-sm text-center hover:border-white/30 hover:text-white transition-all">
+            Bắt đầu miễn phí
+          </a>
+        </div>
+
+        <!-- Pro (Popular) -->
+        <div class="relative pricing-popular border-2 border-[#ccff00]/30 rounded-2xl p-7 flex flex-col animate-on-scroll glow-lime">
+          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#ccff00] text-[#111118] text-xs font-black px-4 py-1 rounded-full tracking-wide uppercase">
+            Phổ biến nhất
+          </div>
+          <div class="mb-6">
+            <div class="text-sm font-bold text-[#ccff00] mb-2 uppercase tracking-wide">Pro</div>
+            <div class="flex items-end gap-1.5 mb-1">
+              <span class="text-4xl font-black text-white">99K</span>
+              <span class="text-white/40 mb-1.5 text-sm">/tháng</span>
+            </div>
+            <div class="text-sm text-white/40">~3.300đ/ngày · hoặc 890K/năm</div>
+          </div>
+          <ul class="space-y-3 text-sm text-white/75 flex-1 mb-8">
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Workflow không giới hạn</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Tất cả AI providers</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Export ảnh 4K chất lượng cao</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Priority support 24/7</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-white/20 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="text-white/30">Team workspace</span></li>
+          </ul>
+          <a href="#" class="w-full py-3 rounded-xl bg-[#ccff00] text-[#111118] font-bold text-sm text-center hover:bg-[#d9ff33] transition-all">
+            Bắt đầu 7 ngày miễn phí
+          </a>
+        </div>
+
+        <!-- Team -->
+        <div class="bg-[#16161f] border border-white/[0.07] rounded-2xl p-7 flex flex-col animate-on-scroll card-hover">
+          <div class="mb-6">
+            <div class="text-sm font-bold text-white/50 mb-2 uppercase tracking-wide">Team</div>
+            <div class="flex items-end gap-1.5 mb-1">
+              <span class="text-4xl font-black text-white">299K</span>
+              <span class="text-white/40 mb-1.5 text-sm">/tháng</span>
+            </div>
+            <div class="text-sm text-white/40">Tối đa 5 thành viên</div>
+          </div>
+          <ul class="space-y-3 text-sm text-white/60 flex-1 mb-8">
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Tất cả tính năng Pro</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>5 tài khoản thành viên</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Chia sẻ workflow nội bộ</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Team workspace riêng</li>
+            <li class="flex items-start gap-2.5"><svg class="w-4 h-4 text-[#ccff00] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Dedicated support</li>
+          </ul>
+          <a href="#" class="w-full py-3 rounded-xl border border-white/15 text-white/70 font-semibold text-sm text-center hover:border-white/30 hover:text-white transition-all">
+            Liên hệ tư vấn
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Guarantee note -->
+      <p class="text-center text-sm text-white/35 mt-8">
+        <svg class="inline w-4 h-4 mr-1.5 text-white/40 -mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Bảo đảm hoàn tiền trong 7 ngày nếu không hài lòng · Không cần thẻ tín dụng để dùng thử
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section id="faq" class="py-24 px-5 bg-[#0e0e16]">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-14 animate-on-scroll">
+        <div class="inline-block text-xs font-bold text-[#ccff00] uppercase tracking-widest mb-4 bg-[#ccff00]/10 px-3 py-1 rounded-full">FAQ</div>
+        <h2 class="text-3xl sm:text-4xl font-black text-white">Câu hỏi thường gặp</h2>
+      </div>
+
+      <div class="space-y-3 animate-on-scroll" id="faqList">
+
+        <div class="faq-item bg-[#16161f] border border-white/[0.07] rounded-xl overflow-hidden">
+          <button class="faq-toggle w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors" onclick="toggleFaq(this)">
+            <span class="text-sm font-semibold text-white">KudoSkill có yêu cầu tài khoản AI riêng không?</span>
+            <svg class="faq-icon w-4 h-4 text-white/40 flex-shrink-0 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-body hidden px-6 pb-5 text-sm text-white/50 leading-relaxed">
+            Không. KudoSkill sử dụng phiên đăng nhập sẵn có của bạn trên các tab ChatGPT, Grok, Gemini đang mở. Bạn không cần API key hay tài khoản thêm.
+          </div>
+        </div>
+
+        <div class="faq-item bg-[#16161f] border border-white/[0.07] rounded-xl overflow-hidden">
+          <button class="faq-toggle w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors" onclick="toggleFaq(this)">
+            <span class="text-sm font-semibold text-white">Sau 7 ngày trial, dữ liệu workflow của tôi có bị mất không?</span>
+            <svg class="faq-icon w-4 h-4 text-white/40 flex-shrink-0 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-body hidden px-6 pb-5 text-sm text-white/50 leading-relaxed">
+            Không. Tất cả workflow được lưu trữ trên tài khoản của bạn và sẽ được giữ nguyên. Bạn chỉ không thể chạy workflow mới cho đến khi nâng cấp.
+          </div>
+        </div>
+
+        <div class="faq-item bg-[#16161f] border border-white/[0.07] rounded-xl overflow-hidden">
+          <button class="faq-toggle w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors" onclick="toggleFaq(this)">
+            <span class="text-sm font-semibold text-white">Extension có hoạt động trên Cốc Cốc không?</span>
+            <svg class="faq-icon w-4 h-4 text-white/40 flex-shrink-0 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-body hidden px-6 pb-5 text-sm text-white/50 leading-relaxed">
+            Có. Cốc Cốc dùng nền tảng Chromium tương tự Chrome, bạn có thể cài extension từ Chrome Web Store bình thường.
+          </div>
+        </div>
+
+        <div class="faq-item bg-[#16161f] border border-white/[0.07] rounded-xl overflow-hidden">
+          <button class="faq-toggle w-full text-left px-6 py-5 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors" onclick="toggleFaq(this)">
+            <span class="text-sm font-semibold text-white">Gói Team có thể chia sẻ workflow giữa các thành viên không?</span>
+            <svg class="faq-icon w-4 h-4 text-white/40 flex-shrink-0 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-body hidden px-6 pb-5 text-sm text-white/50 leading-relaxed">
+            Có. Gói Team có workspace riêng cho nhóm, các thành viên có thể xem, copy và chạy workflow được chia sẻ bởi trưởng nhóm.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA BOTTOM ===== -->
+  <section class="py-24 px-5">
+    <div class="max-w-3xl mx-auto text-center animate-on-scroll">
+      <div class="bg-gradient-to-br from-[#1a1a28] to-[#111118] border border-[#ccff00]/15 rounded-3xl p-12 glow-lime">
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-5 tracking-tight">
+          Bắt đầu ngay hôm nay —<br/><span class="text-gradient">hoàn toàn miễn phí</span>
+        </h2>
+        <p class="text-white/50 text-lg mb-10 max-w-lg mx-auto">Dùng thử 7 ngày đầy đủ tính năng. Không cần thẻ tín dụng. Hủy bất cứ lúc nào.</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="#" data-cws-link class="inline-flex items-center justify-center gap-2.5 bg-[#ccff00] text-[#111118] font-bold text-base px-8 py-4 rounded-xl hover:bg-[#d9ff33] transition-all glow-lime-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#111118"/><path d="M10 8l6 4-6 4V8z" fill="#ccff00"/></svg>
+            Cài đặt Chrome Extension
+          </a>
+          <a href="mailto:hello@kudoskill.xyz" class="inline-flex items-center justify-center gap-2 bg-white/[0.06] border border-white/10 text-white font-semibold text-base px-8 py-4 rounded-xl hover:bg-white/[0.1] transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Liên hệ tư vấn
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="border-t border-white/[0.06] py-12 px-5">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-start gap-10 mb-10">
+        <!-- Brand -->
+        <div class="max-w-xs">
+          <div class="flex items-center gap-2.5 mb-4">
+            <div class="w-7 h-7 rounded-lg bg-[#ccff00] flex items-center justify-center">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 8l4-4 4 4M7 4v10M13 16l4 4 4-4M17 20V10" stroke="#111118" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="font-bold text-white">KudoSkill</span>
+          </div>
+          <p class="text-sm text-white/35 leading-relaxed">Workflow AI đơn giản nhất cho người Việt. Kéo thả, kết nối, tự động hóa.</p>
+        </div>
+
+        <!-- Links -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-8 text-sm">
+          <div>
+            <div class="font-semibold text-white/50 mb-3 text-xs uppercase tracking-wide">Sản phẩm</div>
+            <ul class="space-y-2.5">
+              <li><a href="#features" class="text-white/40 hover:text-white transition-colors">Tính năng</a></li>
+              <li><a href="#pricing" class="text-white/40 hover:text-white transition-colors">Bảng giá</a></li>
+              <li><a href="#" class="text-white/40 hover:text-white transition-colors">Changelog</a></li>
+              <li><a href="#" class="text-white/40 hover:text-white transition-colors">Roadmap</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-semibold text-white/50 mb-3 text-xs uppercase tracking-wide">Hỗ trợ</div>
+            <ul class="space-y-2.5">
+              <li><a href="#faq" class="text-white/40 hover:text-white transition-colors">FAQ</a></li>
+              <li><a href="mailto:hello@kudoskill.xyz" class="text-white/40 hover:text-white transition-colors">Liên hệ</a></li>
+              <li><a href="#" class="text-white/40 hover:text-white transition-colors">Hướng dẫn</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-semibold text-white/50 mb-3 text-xs uppercase tracking-wide">Pháp lý</div>
+            <ul class="space-y-2.5">
+              <li><a href="#" class="text-white/40 hover:text-white transition-colors">Điều khoản</a></li>
+              <li><a href="#" class="text-white/40 hover:text-white transition-colors">Chính sách</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-8 border-t border-white/[0.05] flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white/25">
+        <p>© 2026 KudoSkill. Bảo lưu mọi quyền.</p>
+        <p>Made in Vietnam 🇻🇳</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // FAQ toggle
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const body = item.querySelector('.faq-body');
+      const icon = btn.querySelector('.faq-icon');
+      const isOpen = !body.classList.contains('hidden');
+      // Close all
+      document.querySelectorAll('.faq-body').forEach(b => b.classList.add('hidden'));
+      document.querySelectorAll('.faq-icon').forEach(i => i.style.transform = '');
+      // Open clicked if was closed
+      if (!isOpen) {
+        body.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+      }
+    }
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const id = a.getAttribute('href').slice(1);
+        const el = document.getElementById(id);
+        if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+  </script>
+
+</body>
+</html>
