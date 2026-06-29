@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng nhập — KudoSkill</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lime: '#ccff00',
+            blue: '#335AF5',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            tight: ['"Inter Tight"', 'Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    body { background: #111111; }
+    input:-webkit-autofill { -webkit-box-shadow: 0 0 0 100px #1e1e1e inset !important; -webkit-text-fill-color: #e8e8ea !important; }
+    .tab-active { border-bottom: 2px solid #ccff00; color: #e8e8ea; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #71717a; }
+    .input-field {
+      width: 100%; background: #1a1a1a; border: 1px solid #2e2e33; border-radius: 10px;
+      padding: 12px 14px; color: #e8e8ea; font-size: 14px; outline: none;
+      transition: border-color 0.15s;
+    }
+    .input-field:focus { border-color: #ccff00; }
+    .input-field::placeholder { color: #444; }
+    .btn-lime {
+      width: 100%; background: #ccff00; color: #111; border-radius: 10px;
+      padding: 12px; font-family: 'Inter Tight', sans-serif; font-weight: 800;
+      font-size: 15px; cursor: pointer; border: none; transition: opacity 0.15s;
+    }
+    .btn-lime:hover { opacity: 0.88; }
+    .btn-lime:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-google {
+      width: 100%; background: #1e1e1e; border: 1px solid #2e2e33; border-radius: 10px;
+      padding: 11px 14px; color: #e8e8ea; font-size: 14px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 10px; transition: border-color 0.15s; font-family: 'Inter', sans-serif;
+    }
+    .btn-google:hover { border-color: #444; }
+    .alert { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
+    .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .alert-success { background: rgba(204,255,0,0.08); border: 1px solid rgba(204,255,0,0.25); color: #ccff00; }
+  </style>
+</head>
+<body class="font-sans min-h-screen flex flex-col">
+
+  <!-- Nav -->
+  <nav class="px-6 py-4 flex items-center justify-between max-w-5xl mx-auto w-full">
+    <a href="/" class="flex items-center gap-2 no-underline" style="text-decoration:none;">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#1e1e1e"/>
+        <line x1="8" y1="6" x2="8" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+        <line x1="8" y1="14" x2="20" y2="6" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+        <line x1="8" y1="14" x2="20" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="11" x2="20" y2="6" stroke="#ccff00" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="20" cy="6" r="2.5" fill="#ccff00"/>
+      </svg>
+      <span style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:16px;color:#e8e8ea;">
+        Kudo<span style="color:#ccff00;">Skill</span>
+      </span>
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <main class="flex-1 flex items-center justify-center px-4 py-12">
+    <div style="width:100%;max-width:400px;">
+
+      <h1 style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:28px;color:#e8e8ea;text-align:center;margin-bottom:8px;">
+        Chào mừng trở lại
+      </h1>
+      <p style="color:#71717a;font-size:14px;text-align:center;margin-bottom:32px;">
+        Đăng nhập để quản lý workflow AI của bạn
+      </p>
+
+      <!-- Card -->
+      <div style="background:#1a1a1a;border:1px solid #2e2e33;border-radius:16px;padding:28px;">
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid #2e2e33;">
+          <button id="tab-login" onclick="switchTab('login')"
+            class="tab-active"
+            style="flex:1;padding:10px;font-size:14px;font-weight:600;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;">
+            Đăng nhập
+          </button>
+          <button id="tab-register" onclick="switchTab('register')"
+            class="tab-inactive"
+            style="flex:1;padding:10px;font-size:14px;font-weight:600;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;">
+            Đăng ký
+          </button>
+        </div>
+
+        <!-- Alert -->
+        <div id="alert" style="display:none;" class="alert"></div>
+
+        <!-- Login Form -->
+        <form id="form-login" onsubmit="handleLogin(event)">
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+            <input id="login-email" type="email" placeholder="Email" class="input-field" required autocomplete="email" />
+            <input id="login-password" type="password" placeholder="Mật khẩu" class="input-field" required autocomplete="current-password" />
+          </div>
+          <button type="submit" id="btn-login" class="btn-lime" style="margin-bottom:16px;">Đăng nhập</button>
+          <div style="text-align:right;margin-top:-8px;margin-bottom:16px;">
+            <a href="#" style="font-size:12px;color:#71717a;">Quên mật khẩu?</a>
+          </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="form-register" onsubmit="handleRegister(event)" style="display:none;">
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+            <input id="reg-name" type="text" placeholder="Họ và tên" class="input-field" autocomplete="name" />
+            <input id="reg-email" type="email" placeholder="Email" class="input-field" required autocomplete="email" />
+            <input id="reg-password" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" class="input-field" required autocomplete="new-password" />
+          </div>
+          <button type="submit" id="btn-register" class="btn-lime" style="margin-bottom:16px;">Tạo tài khoản</button>
+        </form>
+
+        <!-- Divider -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="flex:1;height:1px;background:#2e2e33;"></div>
+          <span style="font-size:12px;color:#444;">hoặc</span>
+          <div style="flex:1;height:1px;background:#2e2e33;"></div>
+        </div>
+
+        <!-- Google -->
+        <button class="btn-google" onclick="loginWithGoogle()" type="button">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+          </svg>
+          Tiếp tục với Google
+        </button>
+
+      </div>
+
+      <p style="text-align:center;font-size:12px;color:#444;margin-top:20px;">
+        Bằng cách tiếp tục, bạn đồng ý với
+        <a href="/privacy" style="color:#71717a;">Chính sách quyền riêng tư</a> của KudoSkill.
+      </p>
+    </div>
+  </main>
+
+<script>
+  const API = 'https://api.kudoskill.xyz';
+
+  // Redirect nếu đã đăng nhập
+  if (localStorage.getItem('kudo_token')) {
+    window.location.href = '/dashboard';
+  }
+
+  function switchTab(tab) {
+    const isLogin = tab === 'login';
+    document.getElementById('form-login').style.display = isLogin ? '' : 'none';
+    document.getElementById('form-register').style.display = isLogin ? 'none' : '';
+    document.getElementById('tab-login').className = isLogin ? 'tab-active' : 'tab-inactive';
+    document.getElementById('tab-register').className = isLogin ? 'tab-inactive' : 'tab-active';
+    hideAlert();
+  }
+
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('alert');
+    el.className = 'alert ' + (type === 'error' ? 'alert-error' : 'alert-success');
+    el.textContent = msg;
+    el.style.display = '';
+  }
+  function hideAlert() { document.getElementById('alert').style.display = 'none'; }
+
+  function saveAndRedirect(token, user) {
+    localStorage.setItem('kudo_token', token);
+    localStorage.setItem('kudo_user', JSON.stringify(user));
+    window.location.href = '/dashboard';
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+    hideAlert();
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('login-email').value.trim(),
+          password: document.getElementById('login-password').value,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error?.message || 'Đăng nhập thất bại');
+      saveAndRedirect(data.data.token, data.data.user);
+    } catch (err) {
+      showAlert(err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-register');
+    const password = document.getElementById('reg-password').value;
+    if (password.length < 6) { showAlert('Mật khẩu cần ít nhất 6 ký tự'); return; }
+    btn.disabled = true; btn.textContent = 'Đang tạo tài khoản...';
+    hideAlert();
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('reg-name').value.trim(),
+          email: document.getElementById('reg-email').value.trim(),
+          password,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        if (data.error?.code === 'EMAIL_TAKEN') throw new Error('Email này đã được đăng ký');
+        throw new Error(data.error?.message || 'Đăng ký thất bại');
+      }
+      saveAndRedirect(data.data.token, data.data.user);
+    } catch (err) {
+      showAlert(err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Tạo tài khoản';
+    }
+  }
+
+  async function loginWithGoogle() {
+    try {
+      const res = await fetch(`${API}/auth/google/url`);
+      const data = await res.json();
+      if (data.success) window.location.href = data.data.url;
+    } catch {
+      showAlert('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+    }
+  }
+</script>
+</body>
+</html>

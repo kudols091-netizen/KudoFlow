@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — KudoSkill</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { lime: '#ccff00', blue: '#335AF5' },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            tight: ['"Inter Tight"', 'Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    body { background: #111111; }
+    .card { background: #1a1a1a; border: 1px solid #2e2e33; border-radius: 14px; padding: 20px; }
+    .stat-num { font-family: 'Inter Tight', sans-serif; font-weight: 900; font-size: 32px; color: #e8e8ea; line-height: 1; }
+    .stat-label { font-size: 12px; color: #71717a; margin-top: 4px; }
+    .badge-free { background: #2e2e33; color: #71717a; }
+    .badge-pro { background: rgba(204,255,0,0.1); color: #ccff00; border: 1px solid rgba(204,255,0,0.25); }
+    .badge { border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: 600; display: inline-block; }
+    .menu-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      border-radius: 10px; color: #71717a; font-size: 14px; cursor: pointer;
+      transition: background 0.1s; text-decoration: none;
+    }
+    .menu-item:hover { background: #1e1e1e; color: #e8e8ea; }
+    .menu-item.active { background: #1e1e1e; color: #e8e8ea; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, #335AF5, #9b59f5);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Inter Tight', sans-serif; font-weight: 900;
+      font-size: 18px; color: white; flex-shrink: 0;
+    }
+    .skeleton { background: #2e2e33; border-radius: 6px; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  </style>
+</head>
+<body class="font-sans min-h-screen" style="color:#e8e8ea;">
+
+<div style="display:flex;min-height:100vh;">
+
+  <!-- Sidebar -->
+  <aside style="width:220px;background:#141414;border-right:1px solid #2e2e33;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100%;z-index:10;">
+    <!-- Logo -->
+    <div style="padding:20px 16px;border-bottom:1px solid #2e2e33;">
+      <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="7" fill="#1e1e1e"/>
+          <line x1="8" y1="6" x2="8" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="14" x2="20" y2="6" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="14" x2="20" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="11" x2="20" y2="6" stroke="#ccff00" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="20" cy="6" r="2.5" fill="#ccff00"/>
+        </svg>
+        <span style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:15px;">Kudo<span style="color:#ccff00;">Skill</span></span>
+      </a>
+    </div>
+
+    <!-- Menu -->
+    <nav style="padding:12px 8px;flex:1;">
+      <a href="/dashboard" class="menu-item active">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        Tổng quan
+      </a>
+      <a href="/" class="menu-item">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1L1 5v6l7 4 7-4V5L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Trang chủ
+      </a>
+      <a href="/#pricing" class="menu-item">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5v7M5.5 6.5C5.5 5.4 6.6 5 8 5s2.5.4 2.5 1.5-1.5 2-2.5 2-2.5.9-2.5 2S6.4 12 8 12s2.5-.4 2.5-1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Nâng cấp Pro
+      </a>
+    </nav>
+
+    <!-- User + Logout -->
+    <div style="padding:12px 8px;border-top:1px solid #2e2e33;">
+      <button onclick="handleLogout()" class="menu-item" style="width:100%;border:none;background:none;text-align:left;">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l4-3-4-3M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Đăng xuất
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main style="margin-left:220px;flex:1;padding:32px 36px;max-width:900px;">
+
+    <!-- Header -->
+    <div style="margin-bottom:32px;">
+      <div style="font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;font-weight:600;">Dashboard</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:28px;color:#e8e8ea;">
+        Xin chào, <span id="user-name">...</span> 👋
+      </h1>
+    </div>
+
+    <!-- Profile card -->
+    <div class="card" style="margin-bottom:20px;display:flex;align-items:center;gap:16px;">
+      <div id="user-avatar" class="avatar">K</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span id="profile-name" style="font-weight:700;font-size:16px;">...</span>
+          <span id="plan-badge" class="badge badge-free">Free</span>
+        </div>
+        <div id="profile-email" style="font-size:13px;color:#71717a;">...</div>
+      </div>
+      <div id="verified-status" style="font-size:12px;color:#71717a;"></div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;">
+      <div class="card">
+        <div class="stat-num" id="stat-chatgpt">—</div>
+        <div class="stat-label">Prompts ChatGPT</div>
+        <div style="margin-top:10px;font-size:10px;color:#335AF5;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">ChatGPT</div>
+      </div>
+      <div class="card">
+        <div class="stat-num" id="stat-grok">—</div>
+        <div class="stat-label">Prompts Grok</div>
+        <div style="margin-top:10px;font-size:10px;color:#9b59f5;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">Grok</div>
+      </div>
+      <div class="card">
+        <div class="stat-num" id="stat-gemini">—</div>
+        <div class="stat-label">Prompts Gemini</div>
+        <div style="margin-top:10px;font-size:10px;color:#42d392;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">Gemini</div>
+      </div>
+    </div>
+
+    <!-- Extension + Upgrade -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <!-- Extension card -->
+      <div class="card">
+        <div style="font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:12px;">Chrome Extension</div>
+        <p style="font-size:13px;color:#a1a1aa;margin-bottom:16px;line-height:1.6;">
+          Cài KudoFlow99 để bắt đầu xây dựng workflow AI kéo thả — kết nối ChatGPT, Grok, Gemini.
+        </p>
+        <a id="cws-link" href="#"
+          style="display:inline-block;background:#ccff00;color:#111;border-radius:8px;padding:9px 18px;font-family:'Inter Tight',sans-serif;font-weight:800;font-size:13px;text-decoration:none;">
+          Cài đặt Extension →
+        </a>
+      </div>
+
+      <!-- Upgrade card -->
+      <div class="card" style="border-color:rgba(51,90,245,0.4);background:linear-gradient(135deg,#12152a,#1a1a1a);">
+        <div style="font-size:12px;color:#335AF5;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:12px;">Pro Plan</div>
+        <p style="font-size:13px;color:#a1a1aa;margin-bottom:16px;line-height:1.6;">
+          Mở khóa batch không giới hạn, ưu tiên xử lý và tải xuống 4K tự động.
+        </p>
+        <a href="/#pricing"
+          style="display:inline-block;background:#335AF5;color:#fff;border-radius:8px;padding:9px 18px;font-family:'Inter Tight',sans-serif;font-weight:800;font-size:13px;text-decoration:none;">
+          Nâng cấp ngay →
+        </a>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const API = 'https://api.kudoskill.xyz';
+  const CWS_URL = '#coming-soon';
+
+  // Guard: chưa đăng nhập → về login
+  const token = localStorage.getItem('kudo_token');
+  if (!token) { window.location.href = '/login'; }
+
+  document.getElementById('cws-link').href = CWS_URL;
+
+  async function loadUser() {
+    try {
+      // Thử dùng cached user trước để render nhanh
+      const cached = localStorage.getItem('kudo_user');
+      if (cached) renderUser(JSON.parse(cached));
+
+      // Sau đó fetch mới nhất từ server
+      const res = await fetch(`${API}/auth/me`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('kudo_user', JSON.stringify(data.data.user));
+        renderUser(data.data.user);
+      }
+    } catch {
+      // Giữ cached data nếu offline
+    }
+  }
+
+  function renderUser(user) {
+    const name = user.name || user.email?.split('@')[0] || 'Người dùng';
+    const initial = name.charAt(0).toUpperCase();
+    const plan = user.plan || 'free';
+
+    document.getElementById('user-name').textContent = name;
+    document.getElementById('profile-name').textContent = name;
+    document.getElementById('profile-email').textContent = user.email || '';
+    document.getElementById('user-avatar').textContent = initial;
+
+    const badge = document.getElementById('plan-badge');
+    if (plan === 'pro') {
+      badge.textContent = 'Pro';
+      badge.className = 'badge badge-pro';
+    } else {
+      badge.textContent = 'Free';
+      badge.className = 'badge badge-free';
+    }
+
+    const verified = document.getElementById('verified-status');
+    if (user.email_verified) {
+      verified.innerHTML = '<span style="color:#ccff00;">✓</span> Đã xác minh';
+    } else {
+      verified.innerHTML = '<span style="color:#f59e0b;">!</span> Chưa xác minh email';
+    }
+  }
+
+  async function loadStats() {
+    // Stats sẽ được cập nhật tự động từ extension qua /usage/sync-daily
+    // Hiển thị placeholder — có thể mở rộng sau khi server có GET /usage/summary
+    ['stat-chatgpt', 'stat-grok', 'stat-gemini'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+  }
+
+  function logout() {
+    fetch(`${API}/auth/logout`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).catch(() => {});
+    localStorage.removeItem('kudo_token');
+    localStorage.removeItem('kudo_user');
+    window.location.href = '/login';
+  }
+
+  function handleLogout() { logout(); }
+
+  loadUser();
+  loadStats();
+</script>
+</body>
+</html>
