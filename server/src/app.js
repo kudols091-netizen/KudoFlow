@@ -10,6 +10,7 @@ app.register(require('@fastify/cors'), {
   allowedHeaders: [
     'Content-Type', 'Authorization',
     'X-Fingerprint', 'X-Client-Id', 'X-Timestamp', 'X-Signature', 'X-Extension-Id',
+    'X-Admin-Secret',
   ],
   credentials: true,
 });
