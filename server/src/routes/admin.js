@@ -11,71 +11,59 @@ async function adminGuard(req, reply) {
 
 module.exports = async function adminRoutes(fastify) {
 
-  // POST /admin/set-plan — nâng/hạ plan của user theo email
-  fastify.post('/admin/set-plan', { preHandler: adminGuard }, async (req, reply) => {
-    const { email, plan } = req.body || {};
-    if (!email || !plan) {
-      return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'email and plan required' } });
-    }
-    const validPlans = ['free', 'trial', 'pro', 'lifetime'];
-    if (!validPlans.includes(plan)) {
-      return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: `plan must be one of: ${validPlans.join(', ')}` } });
-    }
-
-    const user = await queryOne('SELECT id, email, plan FROM users WHERE email = ?', [email]);
-    if (!user) {
-      return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
-    }
-
-    const expires_at = plan === 'lifetime' ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-    await query('UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?', [plan, expires_at, user.id]);
-
-    const updated = await queryOne('SELECT id, email, name, plan, plan_expires_at FROM users WHERE id = ?', [user.id]);
-    return { success: true, data: { user: updated } };
+  // GET /admin/stats
+  fastify.get('/admin/stats', { preHandler: adminGuard }, async () => {
+    const [totalUsers]    = await query('SELECT COUNT(*) as n FROM users');
+    const [activeUsers]   = await query("SELECT COUNT(*) as n FROM users WHERE plan IN ('pro','team','lifetime') AND (plan_expires_at IS NULL OR plan_expires_at > NOW()) AND (banned IS NULL OR banned = 0)");
+    const [totalOrders]   = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'paid'");
+    const [totalRevenue]  = await query("SELECT COALESCE(SUM(amount),0) as n FROM orders WHERE status = 'paid'");
+    const [pendingOrders] = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'pending'");
+    const [bannedUsers]   = await query("SELECT COUNT(*) as n FROM users WHERE banned = 1");
+    return {
+      success: true,
+      data: {
+        total_users:    totalUsers.n,
+        active_users:   activeUsers.n,
+        paid_orders:    totalOrders.n,
+        total_revenue:  totalRevenue.n,
+        pending_orders: pendingOrders.n,
+        banned_users:   bannedUsers.n,
+      },
+    };
   });
 
-  // POST /admin/create-user — tạo user mới với plan tùy chọn
-  fastify.post('/admin/create-user', { preHandler: adminGuard }, async (req, reply) => {
-    const { name, email, password, plan = 'lifetime' } = req.body || {};
-    if (!email || !password) {
-      return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'email and password required' } });
-    }
-
-    const existing = await queryOne('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing) {
-      return reply.code(422).send({ success: false, error: { code: 'EMAIL_TAKEN', message: 'Email already registered' } });
-    }
-
-    const hash = await bcrypt.hash(password, 10);
-    const expires_at = plan === 'lifetime' ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-    const result = await query(
-      'INSERT INTO users (name, email, password_hash, email_verified, plan, plan_expires_at) VALUES (?, ?, ?, 1, ?, ?)',
-      [name || email.split('@')[0], email, hash, plan, expires_at]
-    );
-
-    const user = await queryOne('SELECT id, email, name, plan, plan_expires_at FROM users WHERE id = ?', [result.insertId]);
-    const token = await createToken(result.insertId);
-    return reply.code(201).send({ success: true, data: { user, token } });
-  });
-
-  // GET /admin/users — liệt kê users
+  // GET /admin/users
   fastify.get('/admin/users', { preHandler: adminGuard }, async (req) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
     const search = req.query.search || '';
     const users = search
       ? await query(
-          'SELECT id, name, email, plan, plan_expires_at, created_at FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+          'SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
           [`%${search}%`, `%${search}%`, limit, offset]
         )
       : await query(
-          'SELECT id, name, email, plan, plan_expires_at, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+          'SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
           [limit, offset]
         );
     return { success: true, data: { users } };
   });
 
-  // GET /admin/orders — liệt kê đơn hàng
+  // GET /admin/users/:id — chi tiết user + lịch sử đơn hàng
+  fastify.get('/admin/users/:id', { preHandler: adminGuard }, async (req, reply) => {
+    const user = await queryOne(
+      'SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users WHERE id = ?',
+      [req.params.id]
+    );
+    if (!user) return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND' } });
+    const orders = await query(
+      'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 20',
+      [user.id]
+    );
+    return { success: true, data: { user, orders } };
+  });
+
+  // GET /admin/orders
   fastify.get('/admin/orders', { preHandler: adminGuard }, async (req) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
@@ -96,22 +84,84 @@ module.exports = async function adminRoutes(fastify) {
     return { success: true, data: { orders: rows } };
   });
 
-  // GET /admin/stats — thống kê tổng quan
-  fastify.get('/admin/stats', { preHandler: adminGuard }, async () => {
-    const [totalUsers]    = await query('SELECT COUNT(*) as n FROM users');
-    const [activeUsers]   = await query("SELECT COUNT(*) as n FROM users WHERE plan IN ('pro','team','lifetime') AND (plan_expires_at IS NULL OR plan_expires_at > NOW())");
-    const [totalOrders]   = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'paid'");
-    const [totalRevenue]  = await query("SELECT COALESCE(SUM(amount),0) as n FROM orders WHERE status = 'paid'");
-    const [pendingOrders] = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'pending'");
-    return {
-      success: true,
-      data: {
-        total_users:    totalUsers.n,
-        active_users:   activeUsers.n,
-        paid_orders:    totalOrders.n,
-        total_revenue:  totalRevenue.n,
-        pending_orders: pendingOrders.n,
-      },
-    };
+  // POST /admin/set-plan
+  fastify.post('/admin/set-plan', { preHandler: adminGuard }, async (req, reply) => {
+    const { email, plan, expires_days } = req.body || {};
+    if (!email || !plan) {
+      return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'email and plan required' } });
+    }
+    const validPlans = ['free', 'trial', 'pro', 'team', 'lifetime'];
+    if (!validPlans.includes(plan)) {
+      return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: `plan must be one of: ${validPlans.join(', ')}` } });
+    }
+    const user = await queryOne('SELECT id, email, plan FROM users WHERE email = ?', [email]);
+    if (!user) return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+
+    const days = expires_days ? parseInt(expires_days) : 365;
+    const expires_at = plan === 'lifetime' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    await query('UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?', [plan, expires_at, user.id]);
+
+    const updated = await queryOne('SELECT id, email, name, plan, plan_expires_at FROM users WHERE id = ?', [user.id]);
+    return { success: true, data: { user: updated } };
+  });
+
+  // POST /admin/ban-user
+  fastify.post('/admin/ban-user', { preHandler: adminGuard }, async (req, reply) => {
+    const { email, banned = true } = req.body || {};
+    if (!email) return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'email required' } });
+    const user = await queryOne('SELECT id FROM users WHERE email = ?', [email]);
+    if (!user) return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+    await query('UPDATE users SET banned = ? WHERE id = ?', [banned ? 1 : 0, user.id]);
+    return { success: true };
+  });
+
+  // POST /admin/create-user
+  fastify.post('/admin/create-user', { preHandler: adminGuard }, async (req, reply) => {
+    const { name, email, password, plan = 'lifetime' } = req.body || {};
+    if (!email || !password) {
+      return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'email and password required' } });
+    }
+    const existing = await queryOne('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing) {
+      return reply.code(422).send({ success: false, error: { code: 'EMAIL_TAKEN', message: 'Email already registered' } });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    const expires_at = plan === 'lifetime' ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const result = await query(
+      'INSERT INTO users (name, email, password_hash, email_verified, plan, plan_expires_at) VALUES (?, ?, ?, 1, ?, ?)',
+      [name || email.split('@')[0], email, hash, plan, expires_at]
+    );
+    const user = await queryOne('SELECT id, email, name, plan, plan_expires_at FROM users WHERE id = ?', [result.insertId]);
+    const token = await createToken(result.insertId);
+    return reply.code(201).send({ success: true, data: { user, token } });
+  });
+
+  // GET /admin/export/users.csv
+  fastify.get('/admin/export/users.csv', { preHandler: adminGuard }, async (req, reply) => {
+    const users = await query('SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users ORDER BY created_at DESC');
+    const rows = [['ID', 'Tên', 'Email', 'Gói', 'Hết hạn', 'Ngày đăng ký', 'Banned']];
+    for (const u of users) {
+      rows.push([u.id, u.name || '', u.email, u.plan || 'free', u.plan_expires_at || '', u.created_at, u.banned ? 'yes' : 'no']);
+    }
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', 'attachment; filename="users.csv"');
+    return reply.send('﻿' + csv);
+  });
+
+  // GET /admin/export/orders.csv
+  fastify.get('/admin/export/orders.csv', { preHandler: adminGuard }, async (req, reply) => {
+    const orders = await query(
+      `SELECT o.id, u.email, u.name, o.plan, o.billing_cycle, o.amount, o.status, o.transfer_content, o.created_at, o.paid_at
+       FROM orders o JOIN users u ON u.id = o.user_id ORDER BY o.created_at DESC`
+    );
+    const rows = [['Mã đơn', 'Email', 'Tên', 'Gói', 'Chu kỳ', 'Số tiền', 'Trạng thái', 'Nội dung CK', 'Ngày tạo', 'Ngày thanh toán']];
+    for (const o of orders) {
+      rows.push([o.id, o.email, o.name || '', o.plan, o.billing_cycle, o.amount, o.status, o.transfer_content, o.created_at, o.paid_at || '']);
+    }
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', 'attachment; filename="orders.csv"');
+    return reply.send('﻿' + csv);
   });
 };

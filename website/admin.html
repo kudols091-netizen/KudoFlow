@@ -17,6 +17,7 @@
     .badge-paid     { background:rgba(34,197,94,.12);   color:#22c55e; }
     .badge-pending  { background:rgba(234,179,8,.12);   color:#ca8a04; }
     .badge-expired  { background:rgba(239,68,68,.1);    color:#f87171; }
+    .badge-banned   { background:rgba(239,68,68,.15);   color:#f87171; }
     .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
     .tab-btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:.15s; }
     .tab-btn.active { background:#ccff00; color:#111; }
@@ -25,63 +26,77 @@
     .input { background:#111; border:1px solid #2e2e33; border-radius:8px; padding:8px 12px; font-size:13px; color:#e8e8ea; outline:none; transition:.15s; }
     .input:focus { border-color:#ccff00; }
     .btn-lime { background:#ccff00; color:#111; border:none; border-radius:8px; padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer; transition:.15s; }
-    .btn-lime:hover { opacity:.85; }
-    .btn-outline { background:transparent; color:#e8e8ea; border:1px solid #2e2e33; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:.15s; }
+    .btn-lime:hover:not(:disabled) { opacity:.85; }
+    .btn-lime:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-outline { background:transparent; color:#e8e8ea; border:1px solid #2e2e33; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:.15s; white-space:nowrap; }
     .btn-outline:hover { border-color:#555; }
+    .btn-red { background:rgba(239,68,68,.1); color:#f87171; border:1px solid rgba(239,68,68,.25); border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:.15s; }
+    .btn-red:hover { background:rgba(239,68,68,.18); }
+    .btn-green { background:rgba(34,197,94,.1); color:#22c55e; border:1px solid rgba(34,197,94,.25); border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:.15s; }
+    .btn-green:hover { background:rgba(34,197,94,.18); }
     table { width:100%; border-collapse:collapse; }
-    th { text-align:left; padding:10px 14px; font-size:11px; font-weight:700; color:#71717a; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #2e2e33; }
-    td { padding:12px 14px; font-size:13px; border-bottom:1px solid #1e1e22; vertical-align:middle; }
+    th { text-align:left; padding:10px 14px; font-size:11px; font-weight:700; color:#71717a; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #2e2e33; white-space:nowrap; }
+    td { padding:11px 14px; font-size:13px; border-bottom:1px solid #1e1e22; vertical-align:middle; }
     tr:last-child td { border-bottom:none; }
     tr:hover td { background:rgba(255,255,255,.02); }
-    .stat-card { padding:20px 24px; }
-    .stat-val { font-family:'Inter Tight',sans-serif; font-weight:900; font-size:28px; letter-spacing:-.02em; }
+    .stat-card { padding:18px 20px; }
+    .stat-val { font-family:'Inter Tight',sans-serif; font-weight:900; font-size:26px; letter-spacing:-.02em; }
     .stat-label { font-size:12px; color:#71717a; margin-top:2px; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .spinner { width:16px; height:16px; border:2px solid #333; border-top-color:#ccff00; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
     select.input { appearance:none; padding-right:28px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }
+    .overlay { position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;display:none;align-items:center;justify-content:center;padding:16px; }
+    .overlay.open { display:flex; }
+    .modal { background:#1a1a1a;border:1px solid #2e2e33;border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto; }
+    .modal-lg { max-width:720px; }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #2e2e33; }
+    .modal-body { padding:20px; }
+    .detail-row { display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #1e1e22;font-size:13px; }
+    .detail-row:last-child { border-bottom:none; }
   </style>
 </head>
 <body class="min-h-screen">
 
-<!-- Login screen -->
+<!-- Login -->
 <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
   <div class="card p-8 w-full max-w-sm">
     <div class="text-center mb-6">
       <div style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:20px;margin-bottom:4px;">KudoSkill Admin</div>
       <div style="font-size:13px;color:#71717a;">Nhập Admin Secret để tiếp tục</div>
     </div>
-    <input id="secretInput" class="input w-full mb-3" type="password" placeholder="Admin Secret" autocomplete="off"/>
+    <input id="secretInput" class="input w-full mb-3" type="password" placeholder="Admin Secret" autocomplete="off" style="width:100%;"/>
     <div id="loginError" style="display:none;font-size:12px;color:#f87171;margin-bottom:10px;"></div>
-    <button class="btn-lime w-full" onclick="doLogin()">Đăng nhập</button>
+    <button class="btn-lime" style="width:100%;" onclick="doLogin()">Đăng nhập</button>
   </div>
 </div>
 
-<!-- Main dashboard -->
+<!-- Dashboard -->
 <div id="dashboard" style="display:none;">
-
-  <!-- Top nav -->
-  <nav style="border-bottom:1px solid #2e2e33;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;">
-    <span style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:16px;">KudoSkill <span style="color:#ccff00;">Admin</span></span>
-    <button class="btn-outline" onclick="logout()" style="font-size:12px;">Đăng xuất</button>
+  <nav style="border-bottom:1px solid #2e2e33;padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:15px;">KudoSkill <span style="color:#ccff00;">Admin</span></span>
+    <button class="btn-outline" onclick="logout()">Đăng xuất</button>
   </nav>
 
-  <div style="padding:20px 28px;">
+  <div style="padding:16px 20px;">
 
     <!-- Stats -->
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;" id="statsGrid">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;" id="statsGrid">
       <div class="card stat-card"><div class="spinner"></div></div>
     </div>
 
-    <!-- Tabs -->
-    <div style="display:flex;gap:6px;margin-bottom:16px;">
+    <!-- Tabs + actions -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <button class="tab-btn active" id="tabOrders" onclick="switchTab('orders')">Đơn hàng</button>
       <button class="tab-btn" id="tabUsers" onclick="switchTab('users')">Người dùng</button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn-outline" id="exportBtn" onclick="exportCSV()">↓ Export CSV</button>
+      </div>
     </div>
 
     <!-- Orders panel -->
     <div id="panelOrders">
-      <div class="card" style="padding:16px 20px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <select class="input" id="orderStatusFilter" onchange="loadOrders()" style="width:140px;">
+      <div class="card" style="padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select class="input" id="orderStatusFilter" onchange="loadOrders()" style="width:130px;">
           <option value="">Tất cả</option>
           <option value="pending">Pending</option>
           <option value="paid">Paid</option>
@@ -90,44 +105,87 @@
         <button class="btn-outline" onclick="loadOrders()">↻ Làm mới</button>
         <span id="orderCount" style="font-size:12px;color:#71717a;margin-left:auto;"></span>
       </div>
-      <div class="card" style="overflow:hidden;">
+      <div class="card" style="overflow:auto;">
         <div id="ordersTable"><div style="padding:40px;text-align:center;"><div class="spinner"></div></div></div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;" id="ordersPager"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;" id="ordersPager"></div>
     </div>
 
     <!-- Users panel -->
     <div id="panelUsers" style="display:none;">
-      <div class="card" style="padding:16px 20px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <input class="input" id="userSearch" placeholder="Tìm theo email / tên..." style="width:240px;" oninput="debounceLoadUsers()"/>
+      <div class="card" style="padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input class="input" id="userSearch" placeholder="Tìm theo email / tên..." style="width:220px;" oninput="debounceLoadUsers()"/>
         <button class="btn-outline" onclick="loadUsers()">↻ Làm mới</button>
         <span id="userCount" style="font-size:12px;color:#71717a;margin-left:auto;"></span>
       </div>
-      <div class="card" style="overflow:hidden;">
+      <div class="card" style="overflow:auto;">
         <div id="usersTable"><div style="padding:40px;text-align:center;"><div class="spinner"></div></div></div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;" id="usersPager"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;" id="usersPager"></div>
     </div>
 
   </div>
 </div>
 
-<!-- Set plan modal -->
-<div id="setPlanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:center;justify-content:center;">
-  <div class="card" style="width:360px;padding:24px;">
-    <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Đổi gói</div>
-    <div id="setPlanEmail" style="font-size:13px;color:#71717a;margin-bottom:16px;"></div>
-    <select class="input w-full mb-3" id="setPlanValue" style="width:100%;">
-      <option value="free">Free</option>
-      <option value="trial">Trial</option>
-      <option value="pro">Pro</option>
-      <option value="team">Team</option>
-      <option value="lifetime">Lifetime</option>
-    </select>
-    <div id="setPlanError" style="display:none;font-size:12px;color:#f87171;margin-bottom:10px;"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button class="btn-outline" onclick="closeSetPlan()">Huỷ</button>
-      <button class="btn-lime" id="setPlanBtn" onclick="confirmSetPlan()">Lưu</button>
+<!-- Modal: Set Plan -->
+<div class="overlay" id="setPlanModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:15px;">Đổi gói</span>
+      <button class="btn-outline" onclick="closeModal('setPlanModal')" style="padding:4px 10px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="setPlanEmail" style="font-size:13px;color:#71717a;margin-bottom:14px;"></div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:#71717a;display:block;margin-bottom:6px;">Gói</label>
+        <select class="input" id="setPlanValue" style="width:100%;">
+          <option value="free">Free</option>
+          <option value="trial">Trial</option>
+          <option value="pro">Pro</option>
+          <option value="team">Team</option>
+          <option value="lifetime">Lifetime</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px;" id="expiryRow">
+        <label style="font-size:12px;color:#71717a;display:block;margin-bottom:6px;">Thời hạn (số ngày)</label>
+        <input class="input" id="setPlanDays" type="number" min="1" max="3650" value="365" style="width:100%;"/>
+        <div style="font-size:11px;color:#555;margin-top:4px;">Mặc định 365 ngày. Bỏ trống = 365.</div>
+      </div>
+      <div id="setPlanError" style="display:none;font-size:12px;color:#f87171;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-outline" onclick="closeModal('setPlanModal')">Huỷ</button>
+        <button class="btn-lime" id="setPlanBtn" onclick="confirmSetPlan()">Lưu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: User Detail -->
+<div class="overlay" id="userDetailModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:15px;" id="detailTitle">Chi tiết người dùng</span>
+      <button class="btn-outline" onclick="closeModal('userDetailModal')" style="padding:4px 10px;">✕</button>
+    </div>
+    <div class="modal-body" id="userDetailBody">
+      <div style="text-align:center;padding:30px;"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm Ban -->
+<div class="overlay" id="banModal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:15px;" id="banModalTitle">Xác nhận</span>
+      <button class="btn-outline" onclick="closeModal('banModal')" style="padding:4px 10px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#71717a;margin-bottom:16px;" id="banModalMsg"></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-outline" onclick="closeModal('banModal')">Huỷ</button>
+        <button id="banConfirmBtn" class="btn-red" onclick="confirmBan()">Xác nhận</button>
+      </div>
     </div>
   </div>
 </div>
@@ -136,12 +194,14 @@
   const API = 'https://api.kudoskill.xyz/api/v1';
   let adminSecret = '';
   let setPlanTarget = null;
+  let banTarget = null;
+  let banAction = true;
   let ordersOffset = 0;
   let usersOffset = 0;
-  const PAGE = 20;
+  let currentTab = 'orders';
+  const PAGE = 25;
   let _userDebounce = null;
 
-  // ── Auth ──
   function getSecret() { return localStorage.getItem('kudo_admin_secret') || ''; }
 
   async function doLogin() {
@@ -153,37 +213,28 @@
     btn.disabled = true; btn.textContent = 'Đang kiểm tra...';
     try {
       const res = await fetch(`${API}/admin/stats`, { headers: { 'X-Admin-Secret': s } });
-      if (res.status === 403) {
-        errEl.textContent = 'Secret không đúng.';
-        errEl.style.display = 'block';
-        return;
-      }
-      if (!res.ok) {
-        errEl.textContent = `Lỗi server: ${res.status}. Kiểm tra Railway đã deploy chưa.`;
-        errEl.style.display = 'block';
-        return;
-      }
+      if (res.status === 403) { errEl.textContent = 'Secret không đúng.'; errEl.style.display = 'block'; return; }
+      if (!res.ok) { errEl.textContent = `Lỗi server: ${res.status}.`; errEl.style.display = 'block'; return; }
       localStorage.setItem('kudo_admin_secret', s);
       adminSecret = s;
       showDashboard();
     } catch (e) {
-      errEl.textContent = 'Không kết nối được server. Kiểm tra lại API.';
+      errEl.textContent = 'Không kết nối được server.';
       errEl.style.display = 'block';
     } finally {
       btn.disabled = false; btn.textContent = 'Đăng nhập';
     }
   }
 
-  function logout() {
-    localStorage.removeItem('kudo_admin_secret');
-    location.reload();
-  }
+  function logout() { localStorage.removeItem('kudo_admin_secret'); location.reload(); }
 
-  // ── Init ──
   window.addEventListener('DOMContentLoaded', () => {
     const s = getSecret();
     if (s) { adminSecret = s; showDashboard(); }
     document.getElementById('secretInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('setPlanValue').addEventListener('change', function() {
+      document.getElementById('expiryRow').style.display = this.value === 'lifetime' ? 'none' : 'block';
+    });
   });
 
   function showDashboard() {
@@ -200,36 +251,39 @@
     if (!json.success) return;
     const d = json.data;
     document.getElementById('statsGrid').innerHTML = `
-      <div class="card stat-card">
-        <div class="stat-val">${d.total_users}</div>
-        <div class="stat-label">Tổng người dùng</div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-val" style="color:#ccff00;">${d.active_users}</div>
-        <div class="stat-label">Đang dùng gói trả phí</div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-val" style="color:#22c55e;">${d.paid_orders}</div>
-        <div class="stat-label">Đơn đã thanh toán</div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-val" style="color:#ccff00;">${Number(d.total_revenue).toLocaleString('vi-VN')} đ</div>
-        <div class="stat-label">Tổng doanh thu</div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-val" style="color:#ca8a04;">${d.pending_orders}</div>
-        <div class="stat-label">Đơn đang chờ</div>
-      </div>
+      <div class="card stat-card"><div class="stat-val">${d.total_users}</div><div class="stat-label">Tổng user</div></div>
+      <div class="card stat-card"><div class="stat-val" style="color:#ccff00;">${d.active_users}</div><div class="stat-label">Đang trả phí</div></div>
+      <div class="card stat-card"><div class="stat-val" style="color:#22c55e;">${d.paid_orders}</div><div class="stat-label">Đơn đã TT</div></div>
+      <div class="card stat-card"><div class="stat-val" style="color:#ccff00;">${Number(d.total_revenue).toLocaleString('vi-VN')} đ</div><div class="stat-label">Doanh thu</div></div>
+      <div class="card stat-card"><div class="stat-val" style="color:#ca8a04;">${d.pending_orders}</div><div class="stat-label">Đơn chờ</div></div>
+      <div class="card stat-card"><div class="stat-val" style="color:#f87171;">${d.banned_users}</div><div class="stat-label">Bị ban</div></div>
     `;
   }
 
   // ── Tabs ──
   function switchTab(tab) {
+    currentTab = tab;
     document.getElementById('panelOrders').style.display = tab === 'orders' ? 'block' : 'none';
     document.getElementById('panelUsers').style.display  = tab === 'users'  ? 'block' : 'none';
     document.getElementById('tabOrders').className = 'tab-btn' + (tab === 'orders' ? ' active' : '');
     document.getElementById('tabUsers').className  = 'tab-btn' + (tab === 'users'  ? ' active' : '');
     if (tab === 'users' && document.getElementById('usersTable').innerHTML.includes('spinner')) loadUsers();
+  }
+
+  // ── Export CSV ──
+  function exportCSV() {
+    const endpoint = currentTab === 'orders' ? 'export/orders.csv' : 'export/users.csv';
+    const url = `${API}/admin/${endpoint}?_secret=${encodeURIComponent(adminSecret)}`;
+    // Pass secret via query for download (header not possible with <a> download)
+    // Fetch + blob approach for proper header auth
+    fetch(`${API}/admin/${endpoint}`, { headers: { 'X-Admin-Secret': adminSecret } })
+      .then(r => r.blob())
+      .then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = currentTab === 'orders' ? 'orders.csv' : 'users.csv';
+        a.click();
+      });
   }
 
   // ── Orders ──
@@ -239,46 +293,32 @@
     const qs = new URLSearchParams({ limit: PAGE, offset });
     if (status) qs.set('status', status);
     document.getElementById('ordersTable').innerHTML = '<div style="padding:40px;text-align:center;"><div class="spinner"></div></div>';
-
     const res = await fetch(`${API}/admin/orders?${qs}`, { headers: { 'X-Admin-Secret': adminSecret } });
     const json = await res.json();
     if (!json.success) return;
     const orders = json.data.orders;
     document.getElementById('orderCount').textContent = `${orders.length} đơn`;
-
     if (!orders.length) {
-      document.getElementById('ordersTable').innerHTML = '<div style="padding:40px;text-align:center;color:#71717a;font-size:14px;">Không có đơn nào</div>';
+      document.getElementById('ordersTable').innerHTML = '<div style="padding:40px;text-align:center;color:#71717a;">Không có đơn nào</div>';
       document.getElementById('ordersPager').innerHTML = '';
       return;
     }
-
     document.getElementById('ordersTable').innerHTML = `
       <table>
-        <thead><tr>
-          <th>Mã đơn</th><th>Khách hàng</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Ngày tạo</th>
-        </tr></thead>
-        <tbody>
-          ${orders.map(o => `
-            <tr>
-              <td style="font-family:monospace;font-size:12px;color:#71717a;">${o.id}</td>
-              <td>
-                <div style="font-weight:600;">${esc(o.name || '')}</div>
-                <div style="font-size:12px;color:#71717a;">${esc(o.email)}</div>
-              </td>
-              <td>
-                <span class="badge badge-${o.plan}">${o.plan}</span>
-                <span style="font-size:11px;color:#71717a;margin-left:4px;">${o.billing_cycle === 'yearly' ? '/năm' : '/tháng'}</span>
-              </td>
-              <td style="font-weight:700;">${Number(o.amount).toLocaleString('vi-VN')} đ</td>
-              <td><span class="badge badge-${o.status}">${o.status}</span></td>
-              <td style="font-size:12px;color:#71717a;">${fmtDate(o.created_at)}</td>
-            </tr>
-          `).join('')}
+        <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Nội dung CK</th><th>Ngày tạo</th></tr></thead>
+        <tbody>${orders.map(o => `
+          <tr>
+            <td style="font-family:monospace;font-size:11px;color:#71717a;">${esc(o.id)}</td>
+            <td><div style="font-weight:600;">${esc(o.name||'—')}</div><div style="font-size:11px;color:#71717a;">${esc(o.email)}</div></td>
+            <td><span class="badge badge-${o.plan}">${o.plan}</span> <span style="font-size:11px;color:#71717a;">${o.billing_cycle==='yearly'?'/năm':'/tháng'}</span></td>
+            <td style="font-weight:700;">${Number(o.amount).toLocaleString('vi-VN')} đ</td>
+            <td><span class="badge badge-${o.status}">${o.status}</span></td>
+            <td style="font-family:monospace;font-size:11px;color:#71717a;">${esc(o.transfer_content||'—')}</td>
+            <td style="font-size:12px;color:#71717a;white-space:nowrap;">${fmtDate(o.created_at)}</td>
+          </tr>`).join('')}
         </tbody>
-      </table>
-    `;
-
-    renderPager('ordersPager', offset, orders.length, (o) => loadOrders(o));
+      </table>`;
+    renderPager('ordersPager', offset, orders.length, o => loadOrders(o));
   }
 
   // ── Users ──
@@ -293,79 +333,110 @@
     const qs = new URLSearchParams({ limit: PAGE, offset });
     if (search) qs.set('search', search);
     document.getElementById('usersTable').innerHTML = '<div style="padding:40px;text-align:center;"><div class="spinner"></div></div>';
-
     const res = await fetch(`${API}/admin/users?${qs}`, { headers: { 'X-Admin-Secret': adminSecret } });
     const json = await res.json();
     if (!json.success) return;
     const users = json.data.users;
     document.getElementById('userCount').textContent = `${users.length} người dùng`;
-
     if (!users.length) {
-      document.getElementById('usersTable').innerHTML = '<div style="padding:40px;text-align:center;color:#71717a;font-size:14px;">Không tìm thấy người dùng nào</div>';
+      document.getElementById('usersTable').innerHTML = '<div style="padding:40px;text-align:center;color:#71717a;">Không tìm thấy</div>';
       document.getElementById('usersPager').innerHTML = '';
       return;
     }
-
     document.getElementById('usersTable').innerHTML = `
       <table>
-        <thead><tr>
-          <th>Người dùng</th><th>Gói</th><th>Hết hạn</th><th>Ngày đăng ký</th><th></th>
-        </tr></thead>
-        <tbody>
-          ${users.map(u => `
-            <tr>
-              <td>
-                <div style="font-weight:600;">${esc(u.name || '—')}</div>
-                <div style="font-size:12px;color:#71717a;">${esc(u.email)}</div>
-              </td>
-              <td><span class="badge badge-${u.plan || 'free'}">${u.plan || 'free'}</span></td>
-              <td style="font-size:12px;color:#71717a;">${u.plan_expires_at ? fmtDate(u.plan_expires_at) : u.plan === 'lifetime' ? '∞ Trọn đời' : '—'}</td>
-              <td style="font-size:12px;color:#71717a;">${fmtDate(u.created_at)}</td>
-              <td><button class="btn-outline" onclick="openSetPlan('${esc(u.email)}','${u.plan||'free'}')">Đổi gói</button></td>
-            </tr>
-          `).join('')}
+        <thead><tr><th>Người dùng</th><th>Gói</th><th>Hết hạn</th><th>Ngày đăng ký</th><th>Trạng thái</th><th style="text-align:right;">Hành động</th></tr></thead>
+        <tbody>${users.map(u => `
+          <tr>
+            <td><div style="font-weight:600;">${esc(u.name||'—')}</div><div style="font-size:11px;color:#71717a;">${esc(u.email)}</div></td>
+            <td><span class="badge badge-${u.plan||'free'}">${u.plan||'free'}</span></td>
+            <td style="font-size:12px;color:#71717a;white-space:nowrap;">${u.plan_expires_at ? fmtDate(u.plan_expires_at) : u.plan==='lifetime' ? '∞ Trọn đời' : '—'}</td>
+            <td style="font-size:12px;color:#71717a;white-space:nowrap;">${fmtDate(u.created_at)}</td>
+            <td>${u.banned ? '<span class="badge badge-banned">Banned</span>' : '<span style="font-size:12px;color:#71717a;">Bình thường</span>'}</td>
+            <td style="text-align:right;">
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                <button class="btn-outline" onclick="openUserDetail(${u.id})">Chi tiết</button>
+                <button class="btn-outline" onclick="openSetPlan('${esc(u.email)}','${u.plan||'free'}')">Đổi gói</button>
+                ${u.banned
+                  ? `<button class="btn-green" onclick="openBan('${esc(u.email)}',false)">Unban</button>`
+                  : `<button class="btn-red" onclick="openBan('${esc(u.email)}',true)">Ban</button>`
+                }
+              </div>
+            </td>
+          </tr>`).join('')}
         </tbody>
-      </table>
-    `;
-
-    renderPager('usersPager', offset, users.length, (o) => loadUsers(o));
+      </table>`;
+    renderPager('usersPager', offset, users.length, o => loadUsers(o));
   }
 
-  // ── Pager ──
-  function renderPager(id, offset, count, cb) {
-    const el = document.getElementById(id);
-    const hasPrev = offset > 0;
-    const hasNext = count === PAGE;
-    if (!hasPrev && !hasNext) { el.innerHTML = ''; return; }
-    el.innerHTML = `
-      ${hasPrev ? `<button class="btn-outline" onclick="(${cb})(${offset - PAGE})">← Trước</button>` : ''}
-      <span style="font-size:12px;color:#71717a;align-self:center;">Trang ${Math.floor(offset/PAGE)+1}</span>
-      ${hasNext ? `<button class="btn-outline" onclick="(${cb})(${offset + PAGE})">Tiếp →</button>` : ''}
+  // ── User Detail ──
+  async function openUserDetail(id) {
+    document.getElementById('detailTitle').textContent = 'Chi tiết người dùng';
+    document.getElementById('userDetailBody').innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner"></div></div>';
+    openModal('userDetailModal');
+    const res = await fetch(`${API}/admin/users/${id}`, { headers: { 'X-Admin-Secret': adminSecret } });
+    const json = await res.json();
+    if (!json.success) { document.getElementById('userDetailBody').innerHTML = '<div style="padding:20px;color:#f87171;">Lỗi tải dữ liệu</div>'; return; }
+    const { user, orders } = json.data;
+    document.getElementById('detailTitle').textContent = user.name || user.email;
+    document.getElementById('userDetailBody').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div class="card" style="padding:14px;">
+          <div style="font-size:11px;color:#71717a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Thông tin</div>
+          <div class="detail-row"><span style="color:#71717a;">Email</span><span style="font-weight:600;">${esc(user.email)}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Tên</span><span>${esc(user.name||'—')}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Gói</span><span class="badge badge-${user.plan||'free'}">${user.plan||'free'}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Hết hạn</span><span>${user.plan_expires_at ? fmtDate(user.plan_expires_at) : user.plan==='lifetime' ? '∞ Trọn đời' : '—'}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Đăng ký</span><span>${fmtDate(user.created_at)}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Trạng thái</span><span>${user.banned ? '<span class="badge badge-banned">Banned</span>' : 'Bình thường'}</span></div>
+        </div>
+        <div class="card" style="padding:14px;">
+          <div style="font-size:11px;color:#71717a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Thống kê đơn hàng</div>
+          <div class="detail-row"><span style="color:#71717a;">Tổng đơn</span><span style="font-weight:700;">${orders.length}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Đã thanh toán</span><span style="color:#22c55e;font-weight:700;">${orders.filter(o=>o.status==='paid').length}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Đang chờ</span><span style="color:#ca8a04;font-weight:700;">${orders.filter(o=>o.status==='pending').length}</span></div>
+          <div class="detail-row"><span style="color:#71717a;">Tổng chi tiêu</span><span style="color:#ccff00;font-weight:700;">${Number(orders.filter(o=>o.status==='paid').reduce((s,o)=>s+o.amount,0)).toLocaleString('vi-VN')} đ</span></div>
+        </div>
+      </div>
+      ${orders.length ? `
+        <div style="font-size:12px;color:#71717a;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Lịch sử đơn hàng</div>
+        <div class="card" style="overflow:auto;">
+          <table>
+            <thead><tr><th>Mã đơn</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
+            <tbody>${orders.map(o=>`
+              <tr>
+                <td style="font-family:monospace;font-size:11px;color:#71717a;">${esc(o.id)}</td>
+                <td><span class="badge badge-${o.plan}">${o.plan}</span></td>
+                <td style="font-weight:600;">${Number(o.amount).toLocaleString('vi-VN')} đ</td>
+                <td><span class="badge badge-${o.status}">${o.status}</span></td>
+                <td style="font-size:12px;color:#71717a;white-space:nowrap;">${fmtDate(o.created_at)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : '<div style="text-align:center;padding:20px;color:#71717a;font-size:13px;">Chưa có đơn hàng nào</div>'}
     `;
   }
 
-  // ── Set Plan Modal ──
+  // ── Set Plan ──
   function openSetPlan(email, currentPlan) {
     setPlanTarget = email;
     document.getElementById('setPlanEmail').textContent = email;
     document.getElementById('setPlanValue').value = currentPlan;
+    document.getElementById('setPlanDays').value = 365;
     document.getElementById('setPlanError').style.display = 'none';
-    document.getElementById('setPlanModal').style.display = 'flex';
-  }
-
-  function closeSetPlan() {
-    document.getElementById('setPlanModal').style.display = 'none';
-    setPlanTarget = null;
+    document.getElementById('expiryRow').style.display = currentPlan === 'lifetime' ? 'none' : 'block';
+    openModal('setPlanModal');
   }
 
   async function confirmSetPlan() {
     const plan = document.getElementById('setPlanValue').value;
+    const days = document.getElementById('setPlanDays').value || 365;
     const btn = document.getElementById('setPlanBtn');
     btn.disabled = true; btn.textContent = '...';
     const res = await fetch(`${API}/admin/set-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
-      body: JSON.stringify({ email: setPlanTarget, plan }),
+      body: JSON.stringify({ email: setPlanTarget, plan, expires_days: parseInt(days) }),
     });
     const json = await res.json();
     btn.disabled = false; btn.textContent = 'Lưu';
@@ -374,22 +445,62 @@
       document.getElementById('setPlanError').style.display = 'block';
       return;
     }
-    closeSetPlan();
+    closeModal('setPlanModal');
     loadUsers(usersOffset);
     loadStats();
   }
 
-  // ── Helpers ──
-  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function fmtDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  // ── Ban ──
+  function openBan(email, ban) {
+    banTarget = email; banAction = ban;
+    document.getElementById('banModalTitle').textContent = ban ? 'Xác nhận ban user' : 'Xác nhận unban user';
+    document.getElementById('banModalMsg').textContent = ban
+      ? `Ban user ${email}? User sẽ không thể đăng nhập.`
+      : `Unban user ${email}? User sẽ truy cập lại bình thường.`;
+    document.getElementById('banConfirmBtn').className = ban ? 'btn-red' : 'btn-green';
+    document.getElementById('banConfirmBtn').textContent = ban ? 'Ban' : 'Unban';
+    openModal('banModal');
   }
 
-  // Close modal on backdrop click
+  async function confirmBan() {
+    const res = await fetch(`${API}/admin/ban-user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
+      body: JSON.stringify({ email: banTarget, banned: banAction }),
+    });
+    const json = await res.json();
+    if (!json.success) { alert('Lỗi: ' + (json.error?.message || '')); return; }
+    closeModal('banModal');
+    loadUsers(usersOffset);
+    loadStats();
+  }
+
+  // ── Modal helpers ──
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   document.addEventListener('click', e => {
-    if (e.target.id === 'setPlanModal') closeSetPlan();
+    ['setPlanModal','userDetailModal','banModal'].forEach(id => {
+      if (e.target.id === id) closeModal(id);
+    });
   });
+
+  // ── Pager ──
+  function renderPager(id, offset, count, cb) {
+    const el = document.getElementById(id);
+    const hasPrev = offset > 0, hasNext = count === PAGE;
+    if (!hasPrev && !hasNext) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      ${hasPrev ? `<button class="btn-outline" onclick="(${cb})(${offset-PAGE})">← Trước</button>` : ''}
+      <span style="font-size:12px;color:#71717a;align-self:center;">Trang ${Math.floor(offset/PAGE)+1}</span>
+      ${hasNext ? `<button class="btn-outline" onclick="(${cb})(${offset+PAGE})">Tiếp →</button>` : ''}`;
+  }
+
+  // ── Helpers ──
+  function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
 </script>
 </body>
 </html>

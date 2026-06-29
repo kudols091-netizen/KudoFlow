@@ -195,6 +195,11 @@ async function migrate() {
     await pool.execute(`ALTER TABLE users MODIFY COLUMN plan ENUM('free','trial','pro','team','lifetime') DEFAULT 'free'`);
   } catch(e) { /* already updated or no change needed */ }
 
+  // Add banned column (safe to run multiple times)
+  try {
+    await pool.execute(`ALTER TABLE users ADD COLUMN banned TINYINT(1) DEFAULT 0`);
+  } catch(e) { /* already exists */ }
+
   console.log('Migration completed');
 }
 
