@@ -559,6 +559,7 @@ const NodeTemplates = {
                   <span class="df-ai-output-label-text">${this.escapeHtml(window.I18n?.t('node.aiOutputLabel') || 'AI Output')}</span>
                   <span class="df-ai-output-provider">${this.escapeHtml(providerLabel)}</span>
                   <span class="kudo99-word-count">${resultText.trim().split(/\s+/).filter(Boolean).length} từ</span>
+                  <button class="kudo99-copy-result-btn nodrag" data-copy-result type="button" title="Copy kết quả"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 </div>
                 <div class="df-ai-output-text">${this.formatPromptWithMentions(resultText)}</div>
               </div>
@@ -640,6 +641,7 @@ const NodeTemplates = {
                   </svg>
                   <span class="df-ai-output-label-text">${this.escapeHtml(extractOutputLabel)}</span>
                   <span class="kudo99-word-count">${extractResultText.trim().split(/\s+/).filter(Boolean).length} từ</span>
+                  <button class="kudo99-copy-result-btn nodrag" data-copy-result type="button" title="Copy kết quả"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 </div>
                 <div class="df-ai-output-text">${this.escapeHtml(extractResultText)}</div>
               </div>
@@ -707,6 +709,7 @@ const NodeTemplates = {
                   </svg>
                   <span class="df-ai-output-label-text">${window.I18n?.t('node.webImportOutputLabel') || 'Kết quả'}</span>
                   <span class="kudo99-word-count">${resultText.trim().split(/\s+/).filter(Boolean).length} từ</span>
+                  <button class="kudo99-copy-result-btn nodrag" data-copy-result type="button" title="Copy kết quả"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
                 </div>
                 <div class="df-ai-output-text">${this.escapeHtml(resultText)}</div>
               </div>

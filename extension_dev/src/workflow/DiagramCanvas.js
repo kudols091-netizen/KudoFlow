@@ -97,6 +97,7 @@ class DiagramCanvas {
         </button>
         <div class="df-select-box hidden" id="dfSelectBox"></div>
         <div id="connTooltip" class="kudo99-conn-tooltip" style="display:none"></div>
+        <div id="kudo99TopBar" class="kudo99-top-progress-bar hidden"></div>
         <div class="workflow-progress hidden" id="workflowProgress">
           <span class="workflow-progress-text" id="progressText">0 / 0</span>
           <div class="workflow-progress-bar">
@@ -106,9 +107,12 @@ class DiagramCanvas {
         <div class="canvas-brand-zone">
           <div class="kudotoolai-header-brand">
             <div class="kudotoolai-header-logo">
-              <img src="icons/icon-32.png" alt="KudoToolAI">
+              <img src="icons/icon-32.png" alt="KudoFlow99">
             </div>
-            <span class="kudotoolai-header-title">KudoToolAI</span>
+            <div class="kudo99-brand-text">
+              <span class="kudotoolai-header-title">KudoFlow99</span>
+              <span class="kudo99-brand-tagline">Powered by AI</span>
+            </div>
             <span class="kudotoolai-user-plan-badge hidden" id="canvasPlanBadge" data-plan="free" title="${window.I18n?.t('settings.planBadgeTooltip') || 'Gói & quota'}">Free</span>
           </div>
         </div>
@@ -1510,15 +1514,20 @@ class DiagramCanvas {
     const progress = this.container.querySelector('#workflowProgress');
     const text = this.container.querySelector('#progressText');
     const fill = this.container.querySelector('#progressFill');
+    const topBar = this.container.querySelector('#kudo99TopBar');
 
     if (progress) progress.classList.remove('hidden');
     if (text) text.textContent = `${current} / ${total}`;
-    if (fill) fill.style.width = `${total > 0 ? (current / total) * 100 : 0}%`;
+    const pct = total > 0 ? (current / total) * 100 : 0;
+    if (fill) fill.style.width = `${pct}%`;
+    if (topBar) { topBar.classList.remove('hidden'); topBar.style.width = `${pct}%`; }
   }
 
   hideProgress() {
     const progress = this.container.querySelector('#workflowProgress');
     if (progress) progress.classList.add('hidden');
+    const topBar = this.container.querySelector('#kudo99TopBar');
+    if (topBar) { topBar.classList.add('hidden'); topBar.style.width = '0%'; }
   }
 
   // Duplicate a node with offset

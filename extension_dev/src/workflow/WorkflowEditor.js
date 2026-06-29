@@ -3642,6 +3642,29 @@ class WorkflowEditor {
       this._runSingleNode(drawflowId);
     });
 
+    // Copy result button — copy df-ai-output-text to clipboard
+    diagramContainer?.addEventListener('click', (e) => {
+      const copyBtn = e.target.closest('[data-copy-result]');
+      if (!copyBtn) return;
+      e.stopPropagation();
+      const outputContainer = copyBtn.closest('.df-ai-output-container');
+      const text = outputContainer?.querySelector('.df-ai-output-text')?.textContent || '';
+      navigator.clipboard?.writeText(text).then(() => {
+        copyBtn.classList.add('kudo99-copied');
+        setTimeout(() => copyBtn.classList.remove('kudo99-copied'), 1500);
+      }).catch(() => {});
+    });
+
+    // Dblclick on node header → toggle collapse
+    diagramContainer?.addEventListener('dblclick', (e) => {
+      const header = e.target.closest('.df-node-header');
+      if (!header) return;
+      const dfNode = header.closest('.df-node');
+      if (!dfNode) return;
+      e.stopPropagation();
+      dfNode.classList.toggle('df-node--collapsed');
+    });
+
     // Track mouse position on diagram canvas for smart node placement
     // When user presses 'N' or clicks toolbar add-node, node spawns near mouse instead of center
     // IMPORTANT: Convert pixel coords → canvas coords (accounting for zoom/pan)
@@ -17479,6 +17502,74 @@ QUY TẮC:
     }
   }
 
+  _toggleSpotlight() {
+    if (this._spotlight) this._hideSpotlight();
+    else this._showSpotlight();
+  }
+
+  _showSpotlight() {
+    this._hideSpotlight();
+    const allTypes = window.NodeTemplates?.types || {};
+    const typeKeys = Object.keys(allTypes);
+    const itemsHtml = typeKeys.map(key => {
+      const t = allTypes[key];
+      const icon = window.NodeTemplates?.icons?.[key] || '';
+      return `<button class="kudo99-spot-item nodrag" data-node-type="${key}" type="button">
+        <span class="kudo99-spot-icon df-node-icon ${key}">${icon}</span>
+        <span class="kudo99-spot-name">${t.name || key}</span>
+        <span class="kudo99-spot-desc">${t.description || ''}</span>
+      </button>`;
+    }).join('');
+
+    const el = document.createElement('div');
+    el.className = 'kudo99-spotlight-overlay';
+    el.innerHTML = `
+      <div class="kudo99-spotlight-modal">
+        <div class="kudo99-spotlight-search-row">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="kudo99-spotlight-input" type="text" placeholder="Tìm node… (Esc để đóng)">
+          <kbd class="kudo99-spotlight-kbd">Esc</kbd>
+        </div>
+        <div class="kudo99-spotlight-list">${itemsHtml}</div>
+      </div>
+    `;
+
+    const input = el.querySelector('.kudo99-spotlight-input');
+    input?.addEventListener('input', (ev) => {
+      const q = ev.target.value.toLowerCase().trim();
+      el.querySelectorAll('.kudo99-spot-item').forEach(item => {
+        const name = item.querySelector('.kudo99-spot-name')?.textContent?.toLowerCase() || '';
+        const desc = item.querySelector('.kudo99-spot-desc')?.textContent?.toLowerCase() || '';
+        const type = (item.dataset.nodeType || '').toLowerCase();
+        item.style.display = (!q || name.includes(q) || desc.includes(q) || type.includes(q)) ? '' : 'none';
+      });
+    });
+
+    el.addEventListener('click', (ev) => {
+      if (ev.target === el) { this._hideSpotlight(); return; }
+      const item = ev.target.closest('.kudo99-spot-item');
+      if (!item) return;
+      const type = item.dataset.nodeType;
+      if (!type) return;
+      this._hideSpotlight();
+      const rect = this.overlay?.querySelector('#diagramContainer')?.getBoundingClientRect();
+      const posX = this._lastMouseCanvasPos?.x ?? (rect ? rect.width / 2 : 200);
+      const posY = this._lastMouseCanvasPos?.y ?? (rect ? rect.height / 2 : 200);
+      this._createNodeFromPicker(type, posX, posY);
+    });
+
+    this.overlay?.appendChild(el);
+    this._spotlight = el;
+    setTimeout(() => input?.focus(), 30);
+  }
+
+  _hideSpotlight() {
+    if (this._spotlight) {
+      this._spotlight.remove();
+      this._spotlight = null;
+    }
+  }
+
   /**
    * Tạo node mới từ NodePicker.
    *
@@ -17612,11 +17703,20 @@ QUY TẮC:
         return;
       }
 
+      const isModK = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !e.shiftKey && !e.altKey;
+      if (isModK) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._toggleSpotlight();
+        return;
+      }
+
       // Don't capture if typing in input/textarea
       if (e.target.matches('input, textarea, [contenteditable]')) {
-        // But allow Escape in node picker input
-        if (e.key === 'Escape' && this._nodePicker) {
+        // But allow Escape in node picker input or spotlight
+        if (e.key === 'Escape' && (this._nodePicker || this._spotlight)) {
           this._hideNodePicker();
+          this._hideSpotlight();
           return;
         }
         return;
@@ -17625,7 +17725,9 @@ QUY TẮC:
       if (e.key === 'Escape') {
         // Bug fix 2026-06-03: ESC KHÔNG đóng editor (chỉ close button đóng). Chỉ đóng
         // inner popup/form đang mở. Trước: ESC ở document-level → close() editor luôn.
-        if (this._nodePicker) {
+        if (this._spotlight) {
+          this._hideSpotlight();
+        } else if (this._nodePicker) {
           this._hideNodePicker();
         } else if (this.selectedNodeId) {
           this.hideNodeForm();

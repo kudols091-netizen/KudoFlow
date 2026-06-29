@@ -12163,3 +12163,166 @@ video.wf-media-viewer-content {
   opacity: 0.85;
   filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4));
 }
+
+/* ── Copy result button ─────────────────────────────────────────── */
+.kudo99-copy-result-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.kudo99-copy-result-btn:hover {
+  background: rgba(204,255,0,0.1);
+  border-color: rgba(204,255,0,0.3);
+  color: #ccff00;
+}
+.kudo99-copy-result-btn.kudo99-copied {
+  background: rgba(34,197,94,0.15);
+  border-color: rgba(34,197,94,0.4);
+  color: #22c55e;
+}
+
+/* ── Top progress bar ────────────────────────────────────────────── */
+.kudo99-top-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, #ccff00 0%, #84cc16 60%, #22c55e 100%);
+  border-radius: 0 2px 2px 0;
+  z-index: 9000;
+  box-shadow: 0 0 8px rgba(204,255,0,0.6);
+  transition: width 0.3s ease;
+}
+.kudo99-top-progress-bar.hidden { display: none; }
+
+/* ── Node collapse / expand ──────────────────────────────────────── */
+.df-node--collapsed .df-node-body {
+  display: none;
+}
+.df-node--collapsed .df-node-header {
+  border-radius: 12px;
+}
+.df-node--collapsed {
+  min-width: 0;
+}
+
+/* ── Ctrl+K Spotlight search ─────────────────────────────────────── */
+.kudo99-spotlight-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 19000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(3px);
+}
+.kudo99-spotlight-modal {
+  width: 480px;
+  max-width: calc(100% - 32px);
+  background: #1a1a24;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(204,255,0,0.06);
+  overflow: hidden;
+}
+.kudo99-spotlight-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  color: var(--muted-foreground);
+}
+.kudo99-spotlight-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #e2e2ea;
+  caret-color: #ccff00;
+}
+.kudo99-spotlight-input::placeholder { color: rgba(255,255,255,0.3); }
+.kudo99-spotlight-kbd {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  font-family: monospace;
+  flex-shrink: 0;
+}
+.kudo99-spotlight-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.kudo99-spotlight-list::-webkit-scrollbar { width: 4px; }
+.kudo99-spotlight-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.kudo99-spot-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.kudo99-spot-item:hover { background: rgba(204,255,0,0.07); }
+.kudo99-spot-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.05);
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.kudo99-spot-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e2ea;
+  flex-shrink: 0;
+  min-width: 120px;
+}
+.kudo99-spot-desc {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Enhanced canvas brand zone ──────────────────────────────────── */
+.kudo99-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.kudo99-brand-tagline {
+  font-size: 9px;
+  color: rgba(204,255,0,0.55);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
