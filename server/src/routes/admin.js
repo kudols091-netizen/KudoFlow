@@ -34,17 +34,16 @@ module.exports = async function adminRoutes(fastify) {
 
   // GET /admin/users
   fastify.get('/admin/users', { preHandler: adminGuard }, async (req) => {
-    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-    const offset = parseInt(req.query.offset) || 0;
+    const limit  = Math.min(parseInt(req.query.limit,  10) || 50,  200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0,   0);
     const search = req.query.search || '';
     const users = search
       ? await query(
-          'SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-          [`%${search}%`, `%${search}%`, limit, offset]
+          `SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+          [`%${search}%`, `%${search}%`]
         )
       : await query(
-          'SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
-          [limit, offset]
+          `SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`
         );
     return { success: true, data: { users } };
   });
@@ -65,21 +64,16 @@ module.exports = async function adminRoutes(fastify) {
 
   // GET /admin/orders
   fastify.get('/admin/orders', { preHandler: adminGuard }, async (req) => {
-    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-    const offset = parseInt(req.query.offset) || 0;
+    const limit  = Math.min(parseInt(req.query.limit,  10) || 50,  200);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0,   0);
     const status = req.query.status || '';
     const rows = status
       ? await query(
-          `SELECT o.*, u.email, u.name FROM orders o
-           JOIN users u ON u.id = o.user_id
-           WHERE o.status = ? ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
-          [status, limit, offset]
+          `SELECT o.*, u.email, u.name FROM orders o JOIN users u ON u.id = o.user_id WHERE o.status = ? ORDER BY o.created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+          [status]
         )
       : await query(
-          `SELECT o.*, u.email, u.name FROM orders o
-           JOIN users u ON u.id = o.user_id
-           ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
-          [limit, offset]
+          `SELECT o.*, u.email, u.name FROM orders o JOIN users u ON u.id = o.user_id ORDER BY o.created_at DESC LIMIT ${limit} OFFSET ${offset}`
         );
     return { success: true, data: { orders: rows } };
   });
