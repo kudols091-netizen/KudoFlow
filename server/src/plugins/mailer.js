@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
 let _transporter = null;
 
@@ -8,7 +9,11 @@ function getTransporter() {
     host: process.env.MAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.MAIL_PORT || '465'),
     secure: process.env.MAIL_PORT ? process.env.MAIL_PORT !== '587' : true,
-    family: 4, // force IPv4 — Railway does not support IPv6 outbound
+    // Force IPv4 — Railway outbound IPv6 is unreachable for Gmail SMTP
+    lookup: (hostname, options, cb) => dns.resolve4(hostname, (err, addrs) => {
+      if (err) return cb(err);
+      cb(null, addrs[0], 4);
+    }),
     auth: {
       user: process.env.MAIL_USER || '',
       pass: process.env.MAIL_PASS || '',
