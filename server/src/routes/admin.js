@@ -192,6 +192,23 @@ module.exports = async function adminRoutes(fastify) {
     return reply.code(201).send({ success: true, data: { user, token } });
   });
 
+  // POST /admin/test-email — gửi email test đến địa chỉ bất kỳ
+  fastify.post('/admin/test-email', { preHandler: adminGuard }, async (req, reply) => {
+    const { to } = req.body || {};
+    if (!to) return reply.code(400).send({ success: false, error: { message: 'to required' } });
+    const { sendPaymentSuccess } = require('../plugins/mailer');
+    await sendPaymentSuccess({
+      to,
+      name: 'Khách hàng test',
+      plan: 'pro',
+      billingCycle: 'monthly',
+      amount: 99000,
+      orderId: 'KF-TEST-000000',
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+    return { success: true, message: `Email đã gửi đến ${to}` };
+  });
+
   // GET /admin/export/users.csv
   fastify.get('/admin/export/users.csv', { preHandler: adminGuard }, async (req, reply) => {
     const users = await query('SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users ORDER BY created_at DESC');
