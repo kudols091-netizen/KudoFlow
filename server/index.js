@@ -1,3 +1,6 @@
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first'); // Railway: prefer IPv4 for all outbound connections
+
 const https = require('https');
 const app = require('./src/app');
 const migrate = require('./src/plugins/migrate');
