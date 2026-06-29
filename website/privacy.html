@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chính sách quyền riêng tư — KudoSkill</title>
+  <meta name="description" content="Chính sách quyền riêng tư của KudoFlow99 Chrome Extension bởi KudoSkill." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lime: { DEFAULT: '#ccff00' },
+            blue: { DEFAULT: '#335AF5' },
+            surface: { DEFAULT: '#111111', 1: '#1e1e1e', 2: '#2e2e33' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            tight: ['"Inter Tight"', 'Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    body { background: #111111; color: #e8e8ea; }
+    h2 { font-family: 'Inter Tight', sans-serif; font-weight: 800; color: #e8e8ea; }
+    h3 { font-family: 'Inter', sans-serif; font-weight: 700; color: #ccff00; }
+    p, li { color: #a1a1aa; line-height: 1.75; }
+    a { color: #ccff00; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    hr { border-color: #2e2e33; }
+    .pill {
+      display: inline-block;
+      background: #1e1e1e;
+      border: 1px solid #2e2e33;
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-size: 12px;
+      color: #71717a;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body class="font-sans min-h-screen">
+
+  <!-- Nav -->
+  <nav class="border-b border-[#2e2e33] px-6 py-4 flex items-center justify-between max-w-4xl mx-auto">
+    <a href="/" class="flex items-center gap-2 no-underline">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#1e1e1e"/>
+        <line x1="8" y1="6" x2="8" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+        <line x1="8" y1="14" x2="20" y2="6" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+        <line x1="8" y1="14" x2="20" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="11" x2="20" y2="6" stroke="#ccff00" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="20" cy="6" r="2.5" fill="#ccff00"/>
+      </svg>
+      <span style="font-family:'Inter Tight',sans-serif;font-weight:900;font-size:16px;">
+        Kudo<span style="color:#ccff00;">Skill</span>
+      </span>
+    </a>
+    <a href="/" class="text-sm text-[#71717a] hover:text-[#e8e8ea]">← Trang chủ</a>
+  </nav>
+
+  <!-- Content -->
+  <main class="max-w-3xl mx-auto px-6 py-16">
+
+    <!-- Header -->
+    <div class="mb-12">
+      <div class="text-xs text-[#71717a] uppercase tracking-widest mb-4 font-semibold">Legal</div>
+      <h2 class="text-4xl mb-4">Chính sách Quyền riêng tư</h2>
+      <p class="text-sm text-[#71717a]">
+        Áp dụng cho: <span class="pill">KudoFlow99</span> Chrome Extension &nbsp;·&nbsp;
+        Cập nhật lần cuối: <span class="pill">29/06/2026</span>
+      </p>
+    </div>
+
+    <hr class="mb-10" />
+
+    <!-- Intro -->
+    <section class="mb-10">
+      <p>
+        KudoSkill (<strong class="text-[#e8e8ea]">"chúng tôi"</strong>) xây dựng tiện ích mở rộng
+        Chrome <strong class="text-[#e8e8ea]">KudoFlow99</strong> như một dịch vụ thương mại. Trang này
+        thông báo cho bạn về chính sách của chúng tôi liên quan đến việc thu thập, sử dụng và tiết lộ
+        dữ liệu cá nhân khi bạn sử dụng tiện ích của chúng tôi.
+      </p>
+    </section>
+
+    <!-- 1 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">1. Dữ liệu chúng tôi thu thập</h3>
+      <p class="mb-4">KudoFlow99 <strong class="text-[#e8e8ea]">không thu thập, lưu trữ hoặc chia sẻ dữ liệu cá nhân</strong> của bạn lên bất kỳ máy chủ bên ngoài nào, ngoại trừ các trường hợp được mô tả dưới đây.</p>
+      <ul class="list-disc pl-6 space-y-2">
+        <li><strong class="text-[#e8e8ea]">Dữ liệu lưu cục bộ:</strong> Cấu hình workflow, node layout, prompt template và kết quả được lưu hoàn toàn trên thiết bị của bạn thông qua Chrome Storage API.</li>
+        <li><strong class="text-[#e8e8ea]">Email tài khoản:</strong> Nếu bạn đăng nhập qua Google OAuth, email của bạn được dùng để xác thực và quản lý gói dịch vụ tại <code class="pill">api.kudoskill.xyz</code>.</li>
+        <li><strong class="text-[#e8e8ea]">Prompt và kết quả AI:</strong> Các prompt bạn nhập được gửi trực tiếp đến nền tảng AI bạn chọn (ChatGPT, Grok, Gemini). Chúng tôi không đọc hoặc lưu nội dung này.</li>
+      </ul>
+    </section>
+
+    <!-- 2 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">2. Lý do sử dụng các quyền</h3>
+      <div class="space-y-4">
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">activeTab</span><span class="pill">scripting</span>
+          </div>
+          <p class="text-sm">Để tương tác với tab ChatGPT, Grok, Gemini đang mở — gửi prompt và lấy kết quả khi workflow chạy.</p>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">tabs</span>
+          </div>
+          <p class="text-sm">Để mở và quản lý tab nền tảng AI trong quá trình chạy workflow tự động hàng loạt.</p>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">sidePanel</span>
+          </div>
+          <p class="text-sm">Để hiển thị giao diện kéo thả xây dựng workflow trong Side Panel của Chrome bên cạnh trang web đang duyệt.</p>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">storage</span><span class="pill">unlimitedStorage</span>
+          </div>
+          <p class="text-sm">Để lưu cấu hình workflow, node, prompt template và kết quả AI cục bộ trên thiết bị người dùng.</p>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">downloads</span>
+          </div>
+          <p class="text-sm">Để tự động lưu kết quả AI ra file .txt khi người dùng bật tính năng auto-download trong workflow.</p>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">notifications</span>
+          </div>
+          <p class="text-sm">Để thông báo cho người dùng khi một batch workflow hoàn thành, đặc biệt khi chạy nhiều prompt cùng lúc.</p>
+        </div>
+        <div class="bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5">
+          <div class="flex gap-3 flex-wrap mb-2">
+            <span class="pill">alarms</span>
+          </div>
+          <p class="text-sm">Để lên lịch timing giữa các request AI và quản lý rate limiting tránh bị chặn bởi nền tảng.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">3. Dịch vụ bên thứ ba</h3>
+      <p class="mb-4">Tiện ích kết nối với các dịch vụ sau theo yêu cầu của người dùng:</p>
+      <ul class="list-disc pl-6 space-y-2">
+        <li><strong class="text-[#e8e8ea]">ChatGPT</strong> (chatgpt.com) — nền tảng AI của OpenAI</li>
+        <li><strong class="text-[#e8e8ea]">Grok</strong> (grok.com) — nền tảng AI của xAI</li>
+        <li><strong class="text-[#e8e8ea]">Gemini</strong> (gemini.google.com) — nền tảng AI của Google</li>
+        <li><strong class="text-[#e8e8ea]">api.kudoskill.xyz</strong> — backend của KudoSkill để xác thực tài khoản và quản lý gói dịch vụ</li>
+      </ul>
+      <p class="mt-4">Chúng tôi không kiểm soát chính sách bảo mật của các nền tảng AI trên. Vui lòng tham khảo chính sách của từng nền tảng.</p>
+    </section>
+
+    <!-- 4 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">4. Chúng tôi không làm gì</h3>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>Không bán dữ liệu cá nhân cho bất kỳ bên thứ ba nào.</li>
+        <li>Không đọc hoặc lưu nội dung prompt và kết quả AI của bạn trên máy chủ.</li>
+        <li>Không sử dụng dữ liệu của bạn cho mục đích quảng cáo.</li>
+        <li>Không chạy mã từ xa (remote code) — toàn bộ script được đóng gói trong extension package.</li>
+      </ul>
+    </section>
+
+    <!-- 5 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">5. Bảo mật dữ liệu</h3>
+      <p>Dữ liệu cục bộ được lưu qua Chrome Storage API và chỉ có tiện ích này mới có thể truy cập. Chúng tôi áp dụng các biện pháp bảo mật hợp lý cho API backend, bao gồm xác thực HTTPS và OAuth 2.0.</p>
+    </section>
+
+    <!-- 6 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">6. Quyền của bạn</h3>
+      <p>Bạn có thể xóa toàn bộ dữ liệu cục bộ bất cứ lúc nào bằng cách gỡ cài đặt tiện ích hoặc xóa dữ liệu trong <code class="pill">chrome://settings/siteData</code>. Để xóa tài khoản và dữ liệu trên server, liên hệ chúng tôi qua email dưới đây.</p>
+    </section>
+
+    <!-- 7 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">7. Thay đổi chính sách</h3>
+      <p>Chúng tôi có thể cập nhật chính sách này theo thời gian. Mọi thay đổi sẽ được đăng trên trang này kèm ngày cập nhật mới. Chúng tôi khuyến nghị bạn xem lại định kỳ.</p>
+    </section>
+
+    <!-- 8 -->
+    <section class="mb-10">
+      <h3 class="text-lg mb-4">8. Liên hệ</h3>
+      <p>Nếu bạn có câu hỏi về chính sách này, vui lòng liên hệ:</p>
+      <div class="mt-4 bg-[#1e1e1e] border border-[#2e2e33] rounded-xl p-5 space-y-1">
+        <p class="text-[#e8e8ea] font-semibold">KudoSkill</p>
+        <p>Email: <a href="mailto:kavadepot123@gmail.com">kavadepot123@gmail.com</a></p>
+        <p>Website: <a href="https://kudoskill.xyz">kudoskill.xyz</a></p>
+      </div>
+    </section>
+
+    <hr class="mt-12 mb-8" />
+    <p class="text-xs text-[#444] text-center">© 2026 KudoSkill. All rights reserved.</p>
+  </main>
+
+</body>
+</html>
