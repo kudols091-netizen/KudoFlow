@@ -32,6 +32,7 @@ app.register(async function apiV1(fastify) {
   fastify.register(require('./routes/admin'));
   fastify.register(require('./routes/i18n'));
   fastify.register(require('./routes/telegram'));
+  fastify.register(require('./routes/orders'));
 }, { prefix: '/api/v1' });
 
 // Root

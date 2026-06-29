@@ -163,6 +163,22 @@ async function migrate() {
       UNIQUE KEY unique_user_date (user_id, date),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS orders (
+      id VARCHAR(36) PRIMARY KEY,
+      user_id BIGINT UNSIGNED NOT NULL,
+      plan VARCHAR(20) NOT NULL,
+      billing_cycle ENUM('monthly','yearly') DEFAULT 'monthly',
+      amount INT NOT NULL,
+      status ENUM('pending','paid','expired','cancelled') DEFAULT 'pending',
+      transfer_content VARCHAR(100) UNIQUE NOT NULL,
+      paid_at DATETIME,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_status (status),
+      INDEX idx_transfer (transfer_content)
+    );
   `;
 
   for (const sql of tables.split(';').map(s => s.trim()).filter(s => s.length > 10)) {
@@ -173,6 +189,11 @@ async function migrate() {
   await pool.execute(`INSERT IGNORE INTO system_settings (id, data, version) VALUES (1, '{"maintenance_mode":false,"max_batch_size":50,"supported_providers":["chatgpt","grok","gemini","flow"]}', 1)`);
   await pool.execute(`INSERT IGNORE INTO execution_config (id, data, version) VALUES (1, '{"workflow":{"node_timeout_ms":120000,"max_retries":3},"queue":{"max_concurrent":5,"batch_delay_ms":500},"timing":{"poll_interval_ms":2000,"idle_timeout_ms":30000},"flow_recovery":{"enabled":true,"max_attempts":2}}', 1)`);
   await pool.execute(`INSERT IGNORE INTO providers (id, name, status, data, version) VALUES ('chatgpt','ChatGPT','active','{"models":["gpt-4o","gpt-4o-mini"]}',1),('grok','Grok','active','{"models":["grok-3"]}',1),('gemini','Gemini','active','{"models":["gemini-2.0-flash"]}',1),('flow','Google Flow','active','{"models":["imagen-3"]}',1)`);
+
+  // Alter users plan enum to include 'team' (safe to run multiple times)
+  try {
+    await pool.execute(`ALTER TABLE users MODIFY COLUMN plan ENUM('free','trial','pro','team','lifetime') DEFAULT 'free'`);
+  } catch(e) { /* already updated or no change needed */ }
 
   console.log('Migration completed');
 }
