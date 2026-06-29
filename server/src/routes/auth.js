@@ -141,8 +141,9 @@ module.exports = async function authRoutes(fastify) {
     return reply.code(201).send({ success: true, data: { client_id, secret, expires_at } });
   });
 
-  // GET /auth/google/url
-  fastify.get('/auth/google/url', async () => {
+  // GET /auth/google/url?source=web|extension
+  fastify.get('/auth/google/url', async (req) => {
+    const source = req.query.source === 'web' ? 'web' : 'extension';
     const params = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID || '',
       redirect_uri: process.env.GOOGLE_REDIRECT_URI || '',
@@ -150,15 +151,21 @@ module.exports = async function authRoutes(fastify) {
       scope: 'openid email profile',
       access_type: 'offline',
       prompt: 'consent',
+      state: source,
     });
     return { success: true, data: { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` } };
   });
 
   // GET /auth/google/callback (server-side OAuth callback)
   fastify.get('/auth/google/callback', async (req, reply) => {
-    const { code, error } = req.query;
+    const { code, error, state } = req.query;
+    const isWeb = state === 'web';
+    const errorUrl = isWeb
+      ? `${process.env.WEBSITE_URL || process.env.FRONTEND_URL}/login?error=auth_failed`
+      : `${process.env.FRONTEND_URL}/auth/error`;
+
     if (error || !code) {
-      return reply.redirect(`${process.env.FRONTEND_URL}/auth/error`);
+      return reply.redirect(errorUrl);
     }
     try {
       // Exchange code for tokens
@@ -196,10 +203,13 @@ module.exports = async function authRoutes(fastify) {
       }
 
       const token = await createToken(user.id);
-      // Redirect to OAuth bridge page with token
+      if (isWeb) {
+        const websiteUrl = process.env.WEBSITE_URL || process.env.FRONTEND_URL;
+        return reply.redirect(`${websiteUrl}/auth/success?token=${token}`);
+      }
       return reply.redirect(`${process.env.APP_URL}/auth/google/success?token=${token}`);
     } catch {
-      return reply.redirect(`${process.env.FRONTEND_URL}/auth/error`);
+      return reply.redirect(errorUrl);
     }
   });
 
