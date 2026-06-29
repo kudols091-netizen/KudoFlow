@@ -174,6 +174,69 @@
   </div>
 </div>
 
+<!-- Modal: Edit User -->
+<div class="overlay" id="editUserModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:15px;">Sửa tài khoản</span>
+      <button class="btn-outline" onclick="closeModal('editUserModal')" style="padding:4px 10px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="euId"/>
+      <div style="display:flex;flex-direction:column;gap:11px;">
+
+        <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-bottom:2px;border-bottom:1px solid #2e2e33;">Thông tin cơ bản</div>
+
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Họ tên</label>
+          <input class="input" id="euName" placeholder="Nguyễn Văn A" style="width:100%;"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Email</label>
+          <input class="input" id="euEmail" type="email" style="width:100%;"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Mật khẩu mới <span style="color:#555;">(để trống = không đổi)</span></label>
+          <input class="input" id="euPassword" type="password" placeholder="••••••••" style="width:100%;"/>
+        </div>
+
+        <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:4px;padding-bottom:2px;border-bottom:1px solid #2e2e33;">Gói & Quyền truy cập</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Gói</label>
+            <select class="input" id="euPlan" style="width:100%;" onchange="euPlanChange()">
+              <option value="free">Free</option>
+              <option value="trial">Trial</option>
+              <option value="pro">Pro</option>
+              <option value="team">Team</option>
+              <option value="lifetime">Lifetime</option>
+            </select>
+          </div>
+          <div id="euDaysWrap">
+            <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Số ngày</label>
+            <input class="input" id="euDays" type="number" min="1" max="3650" value="365" style="width:100%;"/>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:4px;padding-bottom:2px;border-bottom:1px solid #2e2e33;">Trạng thái</div>
+
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 0;">
+          <input type="checkbox" id="euBanned" style="width:16px;height:16px;accent-color:#f87171;cursor:pointer;"/>
+          <span style="font-size:13px;">Khoá tài khoản (Ban user)</span>
+        </label>
+
+      </div>
+      <div id="euError"   style="display:none;font-size:12px;color:#f87171;margin-top:12px;padding:8px 10px;background:rgba(239,68,68,.08);border-radius:6px;"></div>
+      <div id="euSuccess" style="display:none;font-size:12px;color:#22c55e;margin-top:12px;padding:8px 10px;background:rgba(34,197,94,.08);border-radius:6px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-outline" onclick="closeModal('editUserModal')">Huỷ</button>
+        <button class="btn-lime" id="euBtn" onclick="confirmEditUser()">Lưu thay đổi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Create User -->
 <div class="overlay" id="createUserModal">
   <div class="modal" style="max-width:400px;">
@@ -412,11 +475,7 @@
             <td style="text-align:right;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
                 <button class="btn-outline" onclick="openUserDetail(${u.id})">Chi tiết</button>
-                <button class="btn-outline" onclick="openSetPlan('${esc(u.email)}','${u.plan||'free'}')">Đổi gói</button>
-                ${u.banned
-                  ? `<button class="btn-green" onclick="openBan('${esc(u.email)}',false)">Unban</button>`
-                  : `<button class="btn-red" onclick="openBan('${esc(u.email)}',true)">Ban</button>`
-                }
+                <button class="btn-lime" style="padding:7px 14px;font-size:12px;" onclick="openEditUser(${u.id},'${esc(u.name||'')}','${esc(u.email)}','${u.plan||'free'}',${u.banned?1:0})">Sửa</button>
               </div>
             </td>
           </tr>`).join('')}
@@ -531,6 +590,60 @@
     loadStats();
   }
 
+  // ── Edit User ──
+  function euPlanChange() {
+    const plan = document.getElementById('euPlan').value;
+    document.getElementById('euDaysWrap').style.display = plan === 'lifetime' ? 'none' : 'block';
+  }
+
+  function openEditUser(id, name, email, plan, banned) {
+    document.getElementById('euId').value       = id;
+    document.getElementById('euName').value     = name;
+    document.getElementById('euEmail').value    = email;
+    document.getElementById('euPassword').value = '';
+    document.getElementById('euPlan').value     = plan;
+    document.getElementById('euDays').value     = 365;
+    document.getElementById('euBanned').checked = banned === 1;
+    document.getElementById('euError').style.display   = 'none';
+    document.getElementById('euSuccess').style.display = 'none';
+    document.getElementById('euDaysWrap').style.display = plan === 'lifetime' ? 'none' : 'block';
+    openModal('editUserModal');
+  }
+
+  async function confirmEditUser() {
+    const id       = document.getElementById('euId').value;
+    const name     = document.getElementById('euName').value.trim();
+    const email    = document.getElementById('euEmail').value.trim();
+    const password = document.getElementById('euPassword').value;
+    const plan     = document.getElementById('euPlan').value;
+    const days     = parseInt(document.getElementById('euDays').value, 10) || 365;
+    const banned   = document.getElementById('euBanned').checked;
+    const errEl    = document.getElementById('euError');
+    const okEl     = document.getElementById('euSuccess');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    if (!email) { errEl.textContent = 'Email không được để trống.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('euBtn');
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+    try {
+      const res = await fetch(`${API}/admin/update-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
+        body: JSON.stringify({ id: parseInt(id), name, email, password: password || undefined, plan, expires_days: days, banned }),
+      });
+      const json = await res.json();
+      if (!json.success) { errEl.textContent = json.error?.message || 'Lỗi cập nhật.'; errEl.style.display = 'block'; return; }
+      okEl.textContent = 'Đã lưu thay đổi thành công.';
+      okEl.style.display = 'block';
+      loadUsers(usersOffset);
+      loadStats();
+      setTimeout(() => closeModal('editUserModal'), 1500);
+    } catch(e) {
+      errEl.textContent = 'Không kết nối được server.'; errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Lưu thay đổi';
+    }
+  }
+
   // ── Create User ──
   function openCreateUser() {
     document.getElementById('cuName').value = '';
@@ -577,7 +690,7 @@
   function openModal(id) { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   document.addEventListener('click', e => {
-    ['setPlanModal','userDetailModal','banModal','createUserModal'].forEach(id => {
+    ['setPlanModal','userDetailModal','banModal','createUserModal','editUserModal'].forEach(id => {
       if (e.target.id === id) closeModal(id);
     });
   });

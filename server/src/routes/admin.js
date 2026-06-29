@@ -99,6 +99,60 @@ module.exports = async function adminRoutes(fastify) {
     return { success: true, data: { user: updated } };
   });
 
+  // POST /admin/update-user — chỉnh sửa tổng hợp thông tin user
+  fastify.post('/admin/update-user', { preHandler: adminGuard }, async (req, reply) => {
+    const { id, name, email, password, plan, expires_days, banned } = req.body || {};
+    if (!id) return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'id required' } });
+
+    const user = await queryOne('SELECT id, email FROM users WHERE id = ?', [id]);
+    if (!user) return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+
+    // Cập nhật thông tin cơ bản
+    if (name !== undefined || email !== undefined) {
+      if (email && email !== user.email) {
+        const conflict = await queryOne('SELECT id FROM users WHERE email = ? AND id != ?', [email, id]);
+        if (conflict) return reply.code(422).send({ success: false, error: { code: 'EMAIL_TAKEN', message: 'Email đã được dùng bởi tài khoản khác' } });
+      }
+      const newName  = name  !== undefined ? name  : undefined;
+      const newEmail = email !== undefined ? email : undefined;
+      if (newName !== undefined && newEmail !== undefined) {
+        await query('UPDATE users SET name = ?, email = ? WHERE id = ?', [newName, newEmail, id]);
+      } else if (newName !== undefined) {
+        await query('UPDATE users SET name = ? WHERE id = ?', [newName, id]);
+      } else if (newEmail !== undefined) {
+        await query('UPDATE users SET email = ? WHERE id = ?', [newEmail, id]);
+      }
+    }
+
+    // Đổi mật khẩu
+    if (password && password.trim()) {
+      const hash = await bcrypt.hash(password.trim(), 10);
+      await query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, id]);
+    }
+
+    // Đổi gói
+    if (plan !== undefined) {
+      const validPlans = ['free', 'trial', 'pro', 'team', 'lifetime'];
+      if (!validPlans.includes(plan)) {
+        return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'plan không hợp lệ' } });
+      }
+      const days = expires_days ? parseInt(expires_days, 10) : 365;
+      const expires_at = plan === 'lifetime' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+      await query('UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?', [plan, expires_at, id]);
+    }
+
+    // Ban/Unban
+    if (banned !== undefined) {
+      await query('UPDATE users SET banned = ? WHERE id = ?', [banned ? 1 : 0, id]);
+    }
+
+    const updated = await queryOne(
+      'SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users WHERE id = ?',
+      [id]
+    );
+    return { success: true, data: { user: updated } };
+  });
+
   // POST /admin/ban-user
   fastify.post('/admin/ban-user', { preHandler: adminGuard }, async (req, reply) => {
     const { email, banned = true } = req.body || {};
