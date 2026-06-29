@@ -18,7 +18,7 @@ module.exports = async function adminRoutes(fastify) {
     const [totalOrders]   = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'paid'");
     const [totalRevenue]  = await query("SELECT COALESCE(SUM(amount),0) as n FROM orders WHERE status = 'paid'");
     const [pendingOrders] = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'pending'");
-    const [bannedUsers]   = await query("SELECT COUNT(*) as n FROM users WHERE banned = 1");
+    const [bannedUsers]   = await query("SELECT COUNT(*) as n FROM users WHERE COALESCE(banned,0) = 1");
     return {
       success: true,
       data: {
@@ -39,11 +39,11 @@ module.exports = async function adminRoutes(fastify) {
     const search = req.query.search || '';
     const users = search
       ? await query(
-          'SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+          'SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
           [`%${search}%`, `%${search}%`, limit, offset]
         )
       : await query(
-          'SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+          'SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
           [limit, offset]
         );
     return { success: true, data: { users } };
@@ -52,7 +52,7 @@ module.exports = async function adminRoutes(fastify) {
   // GET /admin/users/:id — chi tiết user + lịch sử đơn hàng
   fastify.get('/admin/users/:id', { preHandler: adminGuard }, async (req, reply) => {
     const user = await queryOne(
-      'SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users WHERE id = ?',
+      'SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users WHERE id = ?',
       [req.params.id]
     );
     if (!user) return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND' } });
@@ -138,7 +138,7 @@ module.exports = async function adminRoutes(fastify) {
 
   // GET /admin/export/users.csv
   fastify.get('/admin/export/users.csv', { preHandler: adminGuard }, async (req, reply) => {
-    const users = await query('SELECT id, name, email, plan, plan_expires_at, created_at, banned FROM users ORDER BY created_at DESC');
+    const users = await query('SELECT id, name, email, plan, plan_expires_at, created_at, COALESCE(banned,0) as banned FROM users ORDER BY created_at DESC');
     const rows = [['ID', 'Tên', 'Email', 'Gói', 'Hết hạn', 'Ngày đăng ký', 'Banned']];
     for (const u of users) {
       rows.push([u.id, u.name || '', u.email, u.plan || 'free', u.plan_expires_at || '', u.created_at, u.banned ? 'yes' : 'no']);

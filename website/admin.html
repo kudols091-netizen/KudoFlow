@@ -345,7 +345,7 @@
       document.getElementById('ordersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">Lỗi kết nối server</div>`;
       return;
     }
-    if (!json.success) { document.getElementById('ordersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">${json.error?.message||'Lỗi'}</div>`; return; }
+    if (!json.success) { document.getElementById('ordersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">${json.error?.message||json.message||JSON.stringify(json)}</div>`; return; }
     const orders = json.data.orders;
     document.getElementById('orderCount').textContent = `${orders.length} đơn`;
     if (!orders.length) {
@@ -391,7 +391,7 @@
       document.getElementById('usersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">Lỗi kết nối server</div>`;
       return;
     }
-    if (!json.success) { document.getElementById('usersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">${json.error?.message||'Lỗi'}</div>`; return; }
+    if (!json.success) { document.getElementById('usersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">${json.error?.message||json.message||JSON.stringify(json)}</div>`; return; }
     const users = json.data.users;
     document.getElementById('userCount').textContent = `${users.length} người dùng`;
     if (!users.length) {
