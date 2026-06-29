@@ -89,6 +89,7 @@
       <button class="tab-btn active" id="tabOrders" onclick="switchTab('orders')">Đơn hàng</button>
       <button class="tab-btn" id="tabUsers" onclick="switchTab('users')">Người dùng</button>
       <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn-lime" onclick="openCreateUser()" id="createUserBtn" style="display:none;">+ Tạo tài khoản</button>
         <button class="btn-outline" id="exportBtn" onclick="exportCSV()">↓ Export CSV</button>
       </div>
     </div>
@@ -169,6 +170,48 @@
     </div>
     <div class="modal-body" id="userDetailBody">
       <div style="text-align:center;padding:30px;"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create User -->
+<div class="overlay" id="createUserModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:15px;">Tạo tài khoản</span>
+      <button class="btn-outline" onclick="closeModal('createUserModal')" style="padding:4px 10px;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Họ tên</label>
+          <input class="input" id="cuName" placeholder="Nguyễn Văn A" style="width:100%;"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Email <span style="color:#f87171;">*</span></label>
+          <input class="input" id="cuEmail" type="email" placeholder="email@example.com" style="width:100%;"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Mật khẩu <span style="color:#f87171;">*</span></label>
+          <input class="input" id="cuPassword" type="password" placeholder="Tối thiểu 8 ký tự" style="width:100%;"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Gói</label>
+          <select class="input" id="cuPlan" style="width:100%;">
+            <option value="free">Free</option>
+            <option value="trial">Trial</option>
+            <option value="pro">Pro</option>
+            <option value="team">Team</option>
+            <option value="lifetime" selected>Lifetime</option>
+          </select>
+        </div>
+      </div>
+      <div id="cuError" style="display:none;font-size:12px;color:#f87171;margin-top:12px;"></div>
+      <div id="cuSuccess" style="display:none;font-size:12px;color:#22c55e;margin-top:12px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-outline" onclick="closeModal('createUserModal')">Huỷ</button>
+        <button class="btn-lime" id="cuBtn" onclick="confirmCreateUser()">Tạo tài khoản</button>
+      </div>
     </div>
   </div>
 </div>
@@ -267,7 +310,8 @@
     document.getElementById('panelUsers').style.display  = tab === 'users'  ? 'block' : 'none';
     document.getElementById('tabOrders').className = 'tab-btn' + (tab === 'orders' ? ' active' : '');
     document.getElementById('tabUsers').className  = 'tab-btn' + (tab === 'users'  ? ' active' : '');
-    if (tab === 'users' && document.getElementById('usersTable').innerHTML.includes('spinner')) loadUsers();
+    document.getElementById('createUserBtn').style.display = tab === 'users' ? 'inline-block' : 'none';
+    if (tab === 'users') loadUsers();
   }
 
   // ── Export CSV ──
@@ -293,9 +337,15 @@
     const qs = new URLSearchParams({ limit: PAGE, offset });
     if (status) qs.set('status', status);
     document.getElementById('ordersTable').innerHTML = '<div style="padding:40px;text-align:center;"><div class="spinner"></div></div>';
-    const res = await fetch(`${API}/admin/orders?${qs}`, { headers: { 'X-Admin-Secret': adminSecret } });
-    const json = await res.json();
-    if (!json.success) return;
+    let json;
+    try {
+      const res = await fetch(`${API}/admin/orders?${qs}`, { headers: { 'X-Admin-Secret': adminSecret } });
+      json = await res.json();
+    } catch(e) {
+      document.getElementById('ordersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">Lỗi kết nối server</div>`;
+      return;
+    }
+    if (!json.success) { document.getElementById('ordersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">${json.error?.message||'Lỗi'}</div>`; return; }
     const orders = json.data.orders;
     document.getElementById('orderCount').textContent = `${orders.length} đơn`;
     if (!orders.length) {
@@ -333,9 +383,15 @@
     const qs = new URLSearchParams({ limit: PAGE, offset });
     if (search) qs.set('search', search);
     document.getElementById('usersTable').innerHTML = '<div style="padding:40px;text-align:center;"><div class="spinner"></div></div>';
-    const res = await fetch(`${API}/admin/users?${qs}`, { headers: { 'X-Admin-Secret': adminSecret } });
-    const json = await res.json();
-    if (!json.success) return;
+    let json;
+    try {
+      const res = await fetch(`${API}/admin/users?${qs}`, { headers: { 'X-Admin-Secret': adminSecret } });
+      json = await res.json();
+    } catch(e) {
+      document.getElementById('usersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">Lỗi kết nối server</div>`;
+      return;
+    }
+    if (!json.success) { document.getElementById('usersTable').innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">${json.error?.message||'Lỗi'}</div>`; return; }
     const users = json.data.users;
     document.getElementById('userCount').textContent = `${users.length} người dùng`;
     if (!users.length) {
@@ -475,11 +531,53 @@
     loadStats();
   }
 
+  // ── Create User ──
+  function openCreateUser() {
+    document.getElementById('cuName').value = '';
+    document.getElementById('cuEmail').value = '';
+    document.getElementById('cuPassword').value = '';
+    document.getElementById('cuPlan').value = 'lifetime';
+    document.getElementById('cuError').style.display = 'none';
+    document.getElementById('cuSuccess').style.display = 'none';
+    openModal('createUserModal');
+  }
+
+  async function confirmCreateUser() {
+    const name     = document.getElementById('cuName').value.trim();
+    const email    = document.getElementById('cuEmail').value.trim();
+    const password = document.getElementById('cuPassword').value;
+    const plan     = document.getElementById('cuPlan').value;
+    const errEl    = document.getElementById('cuError');
+    const okEl     = document.getElementById('cuSuccess');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    if (!email || !password) { errEl.textContent = 'Email và mật khẩu là bắt buộc.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('cuBtn');
+    btn.disabled = true; btn.textContent = '...';
+    try {
+      const res = await fetch(`${API}/admin/create-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
+        body: JSON.stringify({ name, email, password, plan }),
+      });
+      const json = await res.json();
+      if (!json.success) { errEl.textContent = json.error?.message || 'Lỗi tạo tài khoản.'; errEl.style.display = 'block'; return; }
+      okEl.textContent = `Đã tạo tài khoản ${email} — gói ${plan}.`;
+      okEl.style.display = 'block';
+      loadUsers(usersOffset);
+      loadStats();
+      setTimeout(() => closeModal('createUserModal'), 1800);
+    } catch(e) {
+      errEl.textContent = 'Không kết nối được server.'; errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Tạo tài khoản';
+    }
+  }
+
   // ── Modal helpers ──
   function openModal(id) { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
   document.addEventListener('click', e => {
-    ['setPlanModal','userDetailModal','banModal'].forEach(id => {
+    ['setPlanModal','userDetailModal','banModal','createUserModal'].forEach(id => {
       if (e.target.id === id) closeModal(id);
     });
   });
