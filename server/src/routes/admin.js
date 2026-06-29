@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const { query, queryOne } = require('../plugins/db');
 const { createToken } = require('../services/token');
 
-function adminGuard(req, reply) {
+async function adminGuard(req, reply) {
   const secret = req.headers['x-admin-secret'];
   if (!secret || secret !== process.env.ADMIN_SECRET) {
     return reply.code(403).send({ success: false, error: { code: 'FORBIDDEN', message: 'Invalid admin secret' } });
