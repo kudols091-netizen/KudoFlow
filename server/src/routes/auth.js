@@ -213,6 +213,33 @@ module.exports = async function authRoutes(fastify) {
     }
   });
 
+  // GET /auth/google/success — bridge page for both web and extension flows
+  fastify.get('/auth/google/success', async (req, reply) => {
+    const { token } = req.query;
+    const websiteUrl = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'https://kudo-flow.vercel.app';
+    reply.type('text/html').send(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>KudoSkill — Đang xử lý...</title>
+<style>body{background:#111;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#e8e8ea;}</style>
+</head><body>
+<div style="text-align:center;">
+  <div style="width:36px;height:36px;border:3px solid #2e2e33;border-top-color:#ccff00;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;"></div>
+  <p style="color:#71717a;font-size:14px;">Đang đăng nhập...</p>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script>
+  // Extension content script (oauth-bridge.js) also runs here and captures the token
+  // Then redirect to website
+  if (${JSON.stringify(!!token)}) {
+    setTimeout(function() {
+      window.location.href = ${JSON.stringify(websiteUrl)} + '/auth/success?token=' + ${JSON.stringify(token || '')};
+    }, 300);
+  } else {
+    window.location.href = ${JSON.stringify(websiteUrl)} + '/login?error=auth_failed';
+  }
+</script>
+</body></html>`);
+  });
+
   // GET /auth/google/link-url
   fastify.get('/auth/google/link-url', { preHandler: authenticate }, async () => {
     const params = new URLSearchParams({
