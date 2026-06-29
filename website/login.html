@@ -200,14 +200,17 @@
     }
   }
 
-  async function loginWithGoogle() {
-    try {
-      const res = await fetch(`${API}/auth/google/url?source=web`);
-      const data = await res.json();
-      if (data.success) window.location.href = data.data.url;
-    } catch {
-      showAlert('Không thể kết nối máy chủ. Vui lòng thử lại.');
-    }
+  function loginWithGoogle() {
+    const params = new URLSearchParams({
+      client_id: '326110023490-bro5pph57kqbqst796sh0u5ii8kde6i9.apps.googleusercontent.com',
+      redirect_uri: 'https://api.kudoskill.xyz/api/v1/auth/google/callback',
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'consent',
+      state: 'web',
+    });
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   }
 
   async function handleRegister(e) {
