@@ -136,9 +136,17 @@ module.exports = async function adminRoutes(fastify) {
       if (!validPlans.includes(plan)) {
         return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'plan không hợp lệ' } });
       }
-      const days = expires_days ? parseInt(expires_days, 10) : 365;
-      const expires_at = plan === 'lifetime' ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-      await query('UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?', [plan, expires_at, id]);
+      let expires_at_val = null;
+      if (plan !== 'lifetime' && plan !== 'free') {
+        if (req.body.expires_at) {
+          // Nhận ngày hết hạn trực tiếp (ISO string hoặc YYYY-MM-DD)
+          expires_at_val = new Date(req.body.expires_at);
+        } else {
+          const days = expires_days ? parseInt(expires_days, 10) : 365;
+          expires_at_val = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        }
+      }
+      await query('UPDATE users SET plan = ?, plan_expires_at = ? WHERE id = ?', [plan, expires_at_val, id]);
     }
 
     // Ban/Unban

@@ -202,21 +202,37 @@
 
         <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:4px;padding-bottom:2px;border-bottom:1px solid #2e2e33;">Gói & Quyền truy cập</div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div>
-            <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Gói</label>
-            <select class="input" id="euPlan" style="width:100%;" onchange="euPlanChange()">
-              <option value="free">Free</option>
-              <option value="trial">Trial</option>
-              <option value="pro">Pro</option>
-              <option value="team">Team</option>
-              <option value="lifetime">Lifetime</option>
-            </select>
+        <div>
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Gói</label>
+          <select class="input" id="euPlan" style="width:100%;" onchange="euPlanChange()">
+            <option value="free">Free</option>
+            <option value="trial">Trial (thử nghiệm)</option>
+            <option value="pro">Pro</option>
+            <option value="team">Team</option>
+            <option value="lifetime">Lifetime (Trọn đời)</option>
+          </select>
+        </div>
+
+        <div id="euDateWrap">
+          <label style="font-size:12px;color:#71717a;display:block;margin-bottom:6px;">Thời hạn nhanh</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+            <button type="button" class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="euSetDuration(30)">1 tháng</button>
+            <button type="button" class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="euSetDuration(90)">3 tháng</button>
+            <button type="button" class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="euSetDuration(180)">6 tháng</button>
+            <button type="button" class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="euSetDuration(365)">1 năm</button>
+            <button type="button" class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="euSetDuration(730)">2 năm</button>
           </div>
-          <div id="euDaysWrap">
-            <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Số ngày</label>
-            <input class="input" id="euDays" type="number" min="1" max="3650" value="365" style="width:100%;"/>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Ngày bắt đầu</label>
+              <input class="input" id="euDateStart" type="date" style="width:100%;" onchange="euUpdateSummary()"/>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#71717a;display:block;margin-bottom:5px;">Ngày hết hạn</label>
+              <input class="input" id="euDateEnd" type="date" style="width:100%;" onchange="euUpdateSummary()"/>
+            </div>
           </div>
+          <div id="euSummary" style="margin-top:8px;font-size:12px;color:#ccff00;background:rgba(204,255,0,.07);border-radius:6px;padding:7px 10px;display:none;"></div>
         </div>
 
         <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:4px;padding-bottom:2px;border-bottom:1px solid #2e2e33;">Trạng thái</div>
@@ -475,7 +491,7 @@
             <td style="text-align:right;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
                 <button class="btn-outline" onclick="openUserDetail(${u.id})">Chi tiết</button>
-                <button class="btn-lime" style="padding:7px 14px;font-size:12px;" onclick="openEditUser(${u.id},'${esc(u.name||'')}','${esc(u.email)}','${u.plan||'free'}',${u.banned?1:0})">Sửa</button>
+                <button class="btn-lime" style="padding:7px 14px;font-size:12px;" onclick="openEditUser(${u.id},'${esc(u.name||'')}','${esc(u.email)}','${u.plan||'free'}',${u.banned?1:0},'${u.plan_expires_at||''}')">Sửa</button>
               </div>
             </td>
           </tr>`).join('')}
@@ -591,22 +607,55 @@
   }
 
   // ── Edit User ──
+  function toInputDate(d) {
+    if (!d) return '';
+    const dt = new Date(d);
+    return dt.toISOString().slice(0, 10);
+  }
+  function todayStr() { return toInputDate(new Date()); }
+
   function euPlanChange() {
     const plan = document.getElementById('euPlan').value;
-    document.getElementById('euDaysWrap').style.display = plan === 'lifetime' ? 'none' : 'block';
+    const show = plan !== 'lifetime' && plan !== 'free';
+    document.getElementById('euDateWrap').style.display = show ? 'block' : 'none';
+    if (show) euUpdateSummary();
   }
 
-  function openEditUser(id, name, email, plan, banned) {
+  function euSetDuration(days) {
+    const start = document.getElementById('euDateStart').value || todayStr();
+    const end   = new Date(new Date(start).getTime() + days * 86400000);
+    document.getElementById('euDateStart').value = start;
+    document.getElementById('euDateEnd').value   = toInputDate(end);
+    euUpdateSummary();
+  }
+
+  function euUpdateSummary() {
+    const start = document.getElementById('euDateStart').value;
+    const end   = document.getElementById('euDateEnd').value;
+    const el    = document.getElementById('euSummary');
+    if (!start || !end) { el.style.display = 'none'; return; }
+    const s  = new Date(start), e = new Date(end);
+    if (e <= s) { el.style.display = 'none'; return; }
+    const days = Math.round((e - s) / 86400000);
+    const fmt  = d => new Date(d).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' });
+    el.textContent = `Hiệu lực ${days} ngày · từ ${fmt(start)} → ${fmt(end)}`;
+    el.style.display = 'block';
+  }
+
+  function openEditUser(id, name, email, plan, banned, expiresAt) {
     document.getElementById('euId').value       = id;
     document.getElementById('euName').value     = name;
     document.getElementById('euEmail').value    = email;
     document.getElementById('euPassword').value = '';
     document.getElementById('euPlan').value     = plan;
-    document.getElementById('euDays').value     = 365;
     document.getElementById('euBanned').checked = banned === 1;
     document.getElementById('euError').style.display   = 'none';
     document.getElementById('euSuccess').style.display = 'none';
-    document.getElementById('euDaysWrap').style.display = plan === 'lifetime' ? 'none' : 'block';
+    document.getElementById('euDateStart').value = todayStr();
+    document.getElementById('euDateEnd').value   = expiresAt ? toInputDate(expiresAt) : '';
+    document.getElementById('euSummary').style.display = 'none';
+    euPlanChange();
+    if (expiresAt) euUpdateSummary();
     openModal('editUserModal');
   }
 
@@ -616,19 +665,25 @@
     const email    = document.getElementById('euEmail').value.trim();
     const password = document.getElementById('euPassword').value;
     const plan     = document.getElementById('euPlan').value;
-    const days     = parseInt(document.getElementById('euDays').value, 10) || 365;
     const banned   = document.getElementById('euBanned').checked;
+    const dateEnd  = document.getElementById('euDateEnd').value;
     const errEl    = document.getElementById('euError');
     const okEl     = document.getElementById('euSuccess');
     errEl.style.display = 'none'; okEl.style.display = 'none';
     if (!email) { errEl.textContent = 'Email không được để trống.'; errEl.style.display = 'block'; return; }
+    if ((plan !== 'lifetime' && plan !== 'free') && !dateEnd) {
+      errEl.textContent = 'Vui lòng chọn ngày hết hạn.'; errEl.style.display = 'block'; return;
+    }
     const btn = document.getElementById('euBtn');
     btn.disabled = true; btn.textContent = 'Đang lưu...';
     try {
+      const body = { id: parseInt(id), name, email, plan, banned };
+      if (password) body.password = password;
+      if (dateEnd && plan !== 'lifetime' && plan !== 'free') body.expires_at = dateEnd;
       const res = await fetch(`${API}/admin/update-user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': adminSecret },
-        body: JSON.stringify({ id: parseInt(id), name, email, password: password || undefined, plan, expires_days: days, banned }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.success) { errEl.textContent = json.error?.message || 'Lỗi cập nhật.'; errEl.style.display = 'block'; return; }
