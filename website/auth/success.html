@@ -28,7 +28,7 @@
   if (token) {
     localStorage.setItem('kudo_token', token);
     // Lấy thông tin user rồi lưu
-    fetch('https://api.kudoskill.xyz/auth/me', {
+    fetch('https://api.kudoskill.xyz/api/v1/auth/me', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(r => r.json())
