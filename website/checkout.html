@@ -532,8 +532,44 @@
     });
   }
 
+  // ── Load existing order (when opened from extension with ?order_id=) ──
+  async function loadExistingOrder(orderId) {
+    const token = getToken();
+    if (!token) {
+      document.getElementById('auth-warning').style.display = 'block';
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/orders/${orderId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error();
+      const o = json.data.order;
+      if (o.status === 'paid') { showPaid(); return; }
+      if (o.status === 'expired' || o.status === 'cancelled') { showExpired(); return; }
+      currentOrder = {
+        order_id: o.id,
+        plan: o.plan,
+        billing_cycle: o.billing_cycle,
+        amount: o.amount,
+        transfer_content: o.transfer_content,
+        qr_url: o.qr_url,
+        bank_id: o.bank_id,
+        account_no: o.account_no,
+        account_name: o.account_name,
+        expires_at: o.expires_at,
+      };
+      showQRStep(currentOrder);
+    } catch (_) {
+      // Fallback: let user create a new order
+    }
+  }
+
   // ── Init ──
   initPlanDisplay();
+  const preloadOrderId = params.get('order_id');
+  if (preloadOrderId) loadExistingOrder(preloadOrderId);
 </script>
 </body>
 </html>

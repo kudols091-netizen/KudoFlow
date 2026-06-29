@@ -62,10 +62,56 @@ module.exports = async function adminRoutes(fastify) {
   fastify.get('/admin/users', { preHandler: adminGuard }, async (req) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const offset = parseInt(req.query.offset) || 0;
-    const users = await query(
-      'SELECT id, name, email, plan, plan_expires_at, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [limit, offset]
-    );
+    const search = req.query.search || '';
+    const users = search
+      ? await query(
+          'SELECT id, name, email, plan, plan_expires_at, created_at FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+          [`%${search}%`, `%${search}%`, limit, offset]
+        )
+      : await query(
+          'SELECT id, name, email, plan, plan_expires_at, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+          [limit, offset]
+        );
     return { success: true, data: { users } };
+  });
+
+  // GET /admin/orders — liệt kê đơn hàng
+  fastify.get('/admin/orders', { preHandler: adminGuard }, async (req) => {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = parseInt(req.query.offset) || 0;
+    const status = req.query.status || '';
+    const rows = status
+      ? await query(
+          `SELECT o.*, u.email, u.name FROM orders o
+           JOIN users u ON u.id = o.user_id
+           WHERE o.status = ? ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+          [status, limit, offset]
+        )
+      : await query(
+          `SELECT o.*, u.email, u.name FROM orders o
+           JOIN users u ON u.id = o.user_id
+           ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+          [limit, offset]
+        );
+    return { success: true, data: { orders: rows } };
+  });
+
+  // GET /admin/stats — thống kê tổng quan
+  fastify.get('/admin/stats', { preHandler: adminGuard }, async () => {
+    const [totalUsers]    = await query('SELECT COUNT(*) as n FROM users');
+    const [activeUsers]   = await query("SELECT COUNT(*) as n FROM users WHERE plan IN ('pro','team','lifetime') AND (plan_expires_at IS NULL OR plan_expires_at > NOW())");
+    const [totalOrders]   = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'paid'");
+    const [totalRevenue]  = await query("SELECT COALESCE(SUM(amount),0) as n FROM orders WHERE status = 'paid'");
+    const [pendingOrders] = await query("SELECT COUNT(*) as n FROM orders WHERE status = 'pending'");
+    return {
+      success: true,
+      data: {
+        total_users:    totalUsers.n,
+        active_users:   activeUsers.n,
+        paid_orders:    totalOrders.n,
+        total_revenue:  totalRevenue.n,
+        pending_orders: pendingOrders.n,
+      },
+    };
   });
 };
