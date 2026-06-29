@@ -147,15 +147,31 @@
   async function doLogin() {
     const s = document.getElementById('secretInput').value.trim();
     if (!s) return;
-    const res = await fetch(`${API}/admin/stats`, { headers: { 'X-Admin-Secret': s } });
-    if (res.status === 403) {
-      document.getElementById('loginError').textContent = 'Secret không đúng.';
-      document.getElementById('loginError').style.display = 'block';
-      return;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    const btn = document.querySelector('#loginScreen .btn-lime');
+    btn.disabled = true; btn.textContent = 'Đang kiểm tra...';
+    try {
+      const res = await fetch(`${API}/admin/stats`, { headers: { 'X-Admin-Secret': s } });
+      if (res.status === 403) {
+        errEl.textContent = 'Secret không đúng.';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (!res.ok) {
+        errEl.textContent = `Lỗi server: ${res.status}. Kiểm tra Railway đã deploy chưa.`;
+        errEl.style.display = 'block';
+        return;
+      }
+      localStorage.setItem('kudo_admin_secret', s);
+      adminSecret = s;
+      showDashboard();
+    } catch (e) {
+      errEl.textContent = 'Không kết nối được server. Kiểm tra lại API.';
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
     }
-    localStorage.setItem('kudo_admin_secret', s);
-    adminSecret = s;
-    showDashboard();
   }
 
   function logout() {
