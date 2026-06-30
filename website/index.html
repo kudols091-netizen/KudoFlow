@@ -243,96 +243,284 @@
           </div>
         </div>
 
-        <!-- Hero visual — node canvas mockup -->
-        <div class="mt-16 w-full max-w-4xl mx-auto relative">
-          <div class="absolute inset-0 rounded-2xl bg-gradient-to-b from-[#ccff00]/5 to-transparent pointer-events-none"></div>
-          <div class="bg-[#1e1e1e] border border-white/[0.08] rounded-2xl overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.7)]">
+        <!-- Hero visual — Interactive Workflow Canvas -->
+        <div class="mt-16 w-full max-w-5xl mx-auto relative">
+          <div class="absolute inset-0 rounded-2xl bg-gradient-to-b from-[#ccff00]/5 to-transparent pointer-events-none z-10" style="mask-image:none"></div>
+          <div class="bg-[#1a1a1a] border border-white/[0.08] rounded-2xl overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.7)]">
             <!-- Window bar -->
-            <div class="flex items-center gap-2 px-5 py-3.5 border-b border-white/[0.06] bg-[#111111]/60">
+            <div class="flex items-center gap-2 px-5 py-3 border-b border-white/[0.06] bg-[#111111]/70">
               <div class="flex gap-1.5">
                 <div class="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
                 <div class="w-3 h-3 rounded-full bg-[#febc2e]"></div>
                 <div class="w-3 h-3 rounded-full bg-[#28c840]"></div>
               </div>
               <div class="flex-1 flex justify-center">
-                <div class="text-xs text-white/30 bg-white/[0.04] px-4 py-1 rounded-md">KudoSkill Workflow Builder</div>
+                <div class="text-xs text-white/30 bg-white/[0.04] px-4 py-1 rounded-md">KudoFlow — Workflow Canvas</div>
               </div>
+              <div class="text-[10px] text-white/20 font-mono">drag to explore</div>
             </div>
-            <!-- Canvas mockup -->
-            <div class="relative h-72 sm:h-96 bg-[#12121a] overflow-hidden"
-                 style="background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px;">
 
-              <!-- Connection lines (SVG) -->
-              <svg class="absolute inset-0 w-full h-full" style="pointer-events:none">
+            <!-- Interactive Canvas -->
+            <div id="wf-canvas" style="
+              position:relative; width:100%; height:520px; overflow:hidden;
+              background-color:#111111;
+              background-image: radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px);
+              background-size: 26px 26px;
+              user-select:none;
+            ">
+              <!-- Bottom fade -->
+              <div style="position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to bottom,transparent,#111111);pointer-events:none;z-index:20;"></div>
+
+              <!-- SVG layer -->
+              <svg id="wf-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2;">
                 <defs>
-                  <linearGradient id="conn1" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#ccff00" stop-opacity="0.6"/>
-                    <stop offset="100%" stop-color="#22c55e" stop-opacity="0.6"/>
-                  </linearGradient>
-                  <linearGradient id="conn2" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#22c55e" stop-opacity="0.6"/>
-                    <stop offset="100%" stop-color="#a855f7" stop-opacity="0.6"/>
-                  </linearGradient>
+                  <filter id="wf-glow" x="-60%" y="-60%" width="220%" height="220%">
+                    <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
                 </defs>
-                <!-- Line 1: Prompt → Generate -->
-                <path d="M 220 120 C 270 120, 290 155, 340 155" stroke="url(#conn1)" stroke-width="2" fill="none" stroke-dasharray="4 2"/>
-                <!-- Line 2: Generate → Save -->
-                <path d="M 560 155 C 610 155, 630 215, 680 215" stroke="url(#conn2)" stroke-width="2" fill="none" stroke-dasharray="4 2"/>
               </svg>
 
-              <!-- Node 1: Prompt -->
-              <div class="node-demo absolute top-14 left-10 sm:left-16 w-44 bg-[#1f1f2a] border border-white/10 rounded-xl overflow-hidden shadow-xl" style="border-top: 3px solid #ccff00">
-                <div class="px-3 py-2.5 flex items-center gap-2">
-                  <div class="w-6 h-6 rounded-md bg-[#ccff00]/15 flex items-center justify-center text-[#ccff00]">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <!-- NODE: Reference Image -->
+              <div class="wf-node wf-n0" id="wf-ref" style="left:28px;top:30px;width:170px;">
+                <div class="wf-inner">
+                  <div class="wf-header">
+                    <div class="wf-icon wf-icon-img"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                    <span class="wf-title">Reference Image</span>
+                    <div class="wf-dot wf-dot-done"></div>
                   </div>
-                  <span class="text-xs font-semibold text-white/80">Nhập Prompt</span>
+                  <div class="wf-body">
+                    <div class="wf-preview wf-portrait">
+                      <img src="/images/workflow/workflow-ref-img.png" alt="ref" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                      <div class="wf-shimmer" style="display:none;">🖼️</div>
+                    </div>
+                    <div class="wf-tags"><span class="wf-tag">1 ảnh</span><span class="wf-tag" style="color:#ec4899;border-color:rgba(236,72,153,0.2);">@ref</span></div>
+                  </div>
                 </div>
-                <div class="px-3 pb-3">
-                  <div class="text-[10px] text-white/40 bg-[#111111] rounded-lg px-2.5 py-2 leading-relaxed">
-                    Tạo caption cho ảnh sản phẩm phong cách minimalist...
-                  </div>
-                </div>
-              </div>
-
-              <!-- Node 2: AI Generate (center) -->
-              <div class="node-demo-2 absolute top-28 left-1/2 -translate-x-1/2 w-52 bg-[#1e1e1e] border border-white/10 rounded-xl overflow-hidden shadow-xl" style="border-top: 3px solid #335AF5">
-                <div class="px-3 py-2.5 flex items-center gap-2">
-                  <div class="w-6 h-6 rounded-md flex items-center justify-center" style="background:rgba(51,90,245,0.15); color:#7ba7ff">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m12 8-2 4h4l-2 4"/></svg>
-                  </div>
-                  <span class="text-xs font-semibold text-white/80">ChatGPT</span>
-                  <span class="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1" style="color:#7ba7ff; background:rgba(51,90,245,0.12)">
-                    <span class="w-1 h-1 rounded-full animate-pulse" style="background:#335AF5"></span>
-                    Đang chạy
-                  </span>
-                </div>
-                <div class="px-3 pb-3">
-                  <div class="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div class="h-full w-3/5 bg-gradient-to-r from-green-500 to-green-400 rounded-full" style="animation: pulse 1.5s ease-in-out infinite"></div>
-                  </div>
+                <div class="wf-port wf-out wf-port-img" data-port="ref-img-out" style="top:43%;">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 </div>
               </div>
 
-              <!-- Node 3: Output/Save -->
-              <div class="node-demo-3 absolute top-40 right-10 sm:right-16 w-44 bg-[#1f1f2a] border border-white/10 rounded-xl overflow-hidden shadow-xl" style="border-top: 3px solid #a855f7">
-                <div class="px-3 py-2.5 flex items-center gap-2">
-                  <div class="w-6 h-6 rounded-md bg-purple-500/15 flex items-center justify-center text-purple-400">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <!-- NODE: Prompt 1 -->
+              <div class="wf-node wf-n1" id="wf-p1" style="left:228px;top:290px;width:190px;">
+                <div class="wf-inner">
+                  <div class="wf-header">
+                    <div class="wf-icon wf-icon-prompt"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
+                    <span class="wf-title">Prompt</span>
+                    <div class="wf-dot wf-dot-done"></div>
                   </div>
-                  <span class="text-xs font-semibold text-white/80">Lưu kết quả</span>
-                  <span class="ml-auto text-[9px] text-green-400 font-semibold">✓ Xong</span>
-                </div>
-                <div class="px-3 pb-3">
-                  <div class="text-[10px] text-white/50 leading-relaxed">
-                    "Vẻ đẹp tinh tế trong từng đường nét. Sản phẩm..."
+                  <div class="wf-body">
+                    <p class="wf-ptext">Use the uploaded reference image to preserve the same character identity. Create a cute stylized 3D animated image of the same boy riding a futuristic hoverboard in a beautiful dreamy sky...</p>
+                    <div class="wf-tags"><span class="wf-tag">Plain</span><span class="wf-tag">812/20000</span></div>
                   </div>
                 </div>
+                <div class="wf-port wf-out wf-port-text" data-port="p1-text-out" style="top:40%;"><span class="wf-T">T</span></div>
               </div>
 
-            </div>
+              <!-- NODE: ChatGPT -->
+              <div class="wf-node wf-n2" id="wf-chatgpt" style="left:450px;top:20px;width:230px;">
+                <div class="wf-inner">
+                  <div class="wf-header">
+                    <div class="wf-icon wf-icon-gpt"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"/></svg></div>
+                    <span class="wf-title">ChatGPT</span>
+                    <div class="wf-dot wf-dot-done"></div>
+                  </div>
+                  <div class="wf-pill wf-pill-gpt">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"/></svg>
+                    ChatGPT
+                  </div>
+                  <div class="wf-body" style="margin-top:4px;">
+                    <div class="wf-preview wf-portrait">
+                      <img src="/images/workflow/workflow-chatgpt-result.png" alt="result" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                      <div class="wf-shimmer" style="display:none;">✨</div>
+                    </div>
+                    <div class="wf-tags"><span class="wf-tag">9:16</span><span class="wf-tag" style="color:#10A37F;border-color:rgba(16,163,127,0.2);">gpt-4o</span></div>
+                  </div>
+                </div>
+                <div class="wf-port wf-in wf-port-img" data-port="chatgpt-img-in" style="top:28%;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                <div class="wf-port wf-in wf-port-text" data-port="chatgpt-text-in" style="top:56%;"><span class="wf-T">T</span></div>
+                <div class="wf-port wf-out wf-port-img" data-port="chatgpt-img-out" style="top:40%;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+              </div>
+
+              <!-- NODE: Prompt 2 -->
+              <div class="wf-node wf-n3" id="wf-p2" style="left:716px;top:290px;width:185px;">
+                <div class="wf-inner">
+                  <div class="wf-header">
+                    <div class="wf-icon wf-icon-prompt"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div>
+                    <span class="wf-title">Prompt</span>
+                    <div class="wf-dot wf-dot-done"></div>
+                  </div>
+                  <div class="wf-body">
+                    <p class="wf-ptext">Animate the uploaded image into an 8-second video. The cute chibi boy gently glides on the glowing hoverboard above pastel clouds, blue thrusters pulse gently...</p>
+                    <div class="wf-tags"><span class="wf-tag">Plain</span><span class="wf-tag">543/20000</span></div>
+                  </div>
+                </div>
+                <div class="wf-port wf-out wf-port-text" data-port="p2-text-out" style="top:40%;"><span class="wf-T">T</span></div>
+              </div>
+
+              <!-- NODE: Flow Video -->
+              <div class="wf-node wf-n4" id="wf-flow" style="left:934px;top:18px;width:210px;">
+                <div class="wf-inner">
+                  <div class="wf-header">
+                    <div class="wf-icon wf-icon-vid"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></div>
+                    <span class="wf-title">Flow — Video</span>
+                    <div class="wf-dot wf-dot-pend"></div>
+                  </div>
+                  <div class="wf-pill wf-pill-flow">
+                    <svg width="12" height="12" viewBox="0 0 24 24"><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="#3186FF"/></svg>
+                    Google Flow
+                  </div>
+                  <div class="wf-body" style="margin-top:4px;">
+                    <div class="wf-preview wf-tall">
+                      <video src="/images/workflow/workflow-flow-video.mp4" autoplay loop muted playsinline onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"></video>
+                      <div class="wf-shimmer" style="display:none;">🎬</div>
+                    </div>
+                    <div class="wf-tags"><span class="wf-tag">8s</span><span class="wf-tag">9:16</span><span class="wf-tag" style="color:#a78bfa;border-color:rgba(167,139,250,0.2);">Video</span></div>
+                  </div>
+                </div>
+                <div class="wf-port wf-in wf-port-img" data-port="flow-img-in" style="top:22%;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                <div class="wf-port wf-in wf-port-text" data-port="flow-text-in" style="top:42%;"><span class="wf-T">T</span></div>
+                <div class="wf-port wf-out wf-port-vid" data-port="flow-vid-out" style="top:32%;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></div>
+              </div>
+
+            </div><!-- /wf-canvas -->
           </div>
         </div>
+
+        <style>
+          /* ── WF NODE SYSTEM ── */
+          .wf-node {
+            position:absolute; background:#181818; border:2px solid #3a3a3a;
+            border-radius:12px; overflow:visible; z-index:3;
+            box-shadow:0 8px 32px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.4);
+            cursor:grab; transition:box-shadow .15s,border-color .15s;
+          }
+          .wf-node:active { cursor:grabbing; }
+          .wf-node.wf-dragging { box-shadow:0 20px 56px rgba(0,0,0,.85); border-color:#555; z-index:10; }
+          .wf-inner { border-radius:10px; overflow:hidden; }
+          .wf-header { display:flex; align-items:center; gap:7px; padding:7px 9px; border-bottom:1px solid rgba(255,255,255,.06); }
+          .wf-icon { width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:5px; flex-shrink:0; }
+          .wf-icon-img    { background:rgba(236,72,153,.15); color:#ec4899; }
+          .wf-icon-prompt { background:rgba(111,139,247,.15); color:#6f8bf7; }
+          .wf-icon-gpt    { background:rgba(16,163,127,.15);  color:#10A37F; }
+          .wf-icon-vid    { background:rgba(139,92,246,.15);  color:#a78bfa; }
+          .wf-title { font-size:11px; font-weight:600; color:#e8e8ea; flex:1; }
+          .wf-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+          .wf-dot-done { background:#22c55e; }
+          .wf-dot-pend { background:#f59e0b; animation:wf-pulse 1.5s ease-in-out infinite; }
+          @keyframes wf-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+          .wf-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 8px 3px 6px; border-radius:5px; font-size:10px; font-weight:600; margin:5px 9px 0; width:calc(100% - 18px); }
+          .wf-pill-gpt  { background:rgba(16,163,127,.1); color:#10A37F; }
+          .wf-pill-flow { background:rgba(49,134,255,.1); color:#3186FF; }
+          .wf-body { padding:7px 9px 9px; }
+          .wf-preview { width:100%; border-radius:7px; overflow:hidden; background:#1e1e1e; }
+          .wf-preview img, .wf-preview video { width:100%; height:100%; object-fit:cover; display:block; }
+          .wf-portrait { aspect-ratio:3/4; }
+          .wf-tall     { aspect-ratio:9/16; }
+          .wf-shimmer  { width:100%; height:100%; min-height:50px; background:linear-gradient(135deg,#1e1e1e 0%,#252525 50%,#1e1e1e 100%); background-size:200% 200%; animation:wf-shim 2s linear infinite; display:flex; align-items:center; justify-content:center; color:#333; font-size:20px; }
+          @keyframes wf-shim { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+          .wf-tags { display:flex; gap:3px; flex-wrap:wrap; margin-top:5px; }
+          .wf-tag { display:inline-flex; align-items:center; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:4px; padding:1px 6px; font-size:9px; font-weight:600; color:#71717a; }
+          .wf-ptext { font-size:10px; color:#6b7280; line-height:1.5; max-height:60px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; }
+          /* Ports */
+          .wf-port { position:absolute; width:20px; height:20px; background:#1c1c1c; border:1.5px solid #444; border-radius:5px; display:flex; align-items:center; justify-content:center; transform:translateY(-50%); z-index:10; cursor:crosshair; transition:border-color .15s,transform .1s; }
+          .wf-port:hover { transform:translateY(-50%) scale(1.2); }
+          .wf-out { right:-11px; }
+          .wf-in  { left:-11px; }
+          .wf-port-img  { border-color:rgba(236,72,153,.55); }
+          .wf-port-img:hover { border-color:#ec4899; background:rgba(236,72,153,.08); }
+          .wf-port-text { border-color:rgba(111,139,247,.55); }
+          .wf-port-text:hover { border-color:#6f8bf7; background:rgba(111,139,247,.08); }
+          .wf-port-vid  { border-color:rgba(167,139,250,.55); }
+          .wf-port-vid:hover { border-color:#a78bfa; background:rgba(167,139,250,.08); }
+          .wf-T { font-size:9px; font-weight:800; color:#6f8bf7; font-family:'Inter Tight',sans-serif; line-height:1; }
+          /* Float */
+          @keyframes wf-f0 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-7px)} }
+          @keyframes wf-f1 { 0%,100%{transform:translateY(-3px)} 50%{transform:translateY(5px)}  }
+          @keyframes wf-f2 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-9px)} }
+          @keyframes wf-f3 { 0%,100%{transform:translateY(-2px)} 50%{transform:translateY(6px)}  }
+          @keyframes wf-f4 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-5px)}  }
+          .wf-n0 { animation:wf-f0 4.6s ease-in-out infinite; }
+          .wf-n1 { animation:wf-f1 5.3s ease-in-out infinite; }
+          .wf-n2 { animation:wf-f2 4.9s ease-in-out infinite; }
+          .wf-n3 { animation:wf-f3 5.7s ease-in-out infinite; }
+          .wf-n4 { animation:wf-f4 4.3s ease-in-out infinite; }
+          @keyframes wf-dash { to { stroke-dashoffset: -24; } }
+        </style>
+
+        <script>
+        (function(){
+          const CONNS = [
+            { from:'ref-img-out',    to:'chatgpt-img-in',  color:'#ec4899' },
+            { from:'p1-text-out',    to:'chatgpt-text-in', color:'#6f8bf7' },
+            { from:'chatgpt-img-out',to:'flow-img-in',     color:'#ccff00' },
+            { from:'p2-text-out',    to:'flow-text-in',    color:'#6f8bf7' },
+          ];
+          const svg    = document.getElementById('wf-svg');
+          const canvas = document.getElementById('wf-canvas');
+
+          function pc(el) {
+            const pr = el.getBoundingClientRect();
+            const cr = canvas.getBoundingClientRect();
+            return { x: pr.left + pr.width/2 - cr.left, y: pr.top + pr.height/2 - cr.top };
+          }
+          function ha(hex, a) {
+            const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+            return `rgba(${r},${g},${b},${a})`;
+          }
+          function mp(d, stroke, w, dash, filt, delay) {
+            const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+            p.setAttribute('d',d); p.setAttribute('fill','none');
+            p.setAttribute('stroke',stroke); p.setAttribute('stroke-width',w);
+            if (dash)  p.setAttribute('stroke-dasharray',dash);
+            if (filt)  p.style.filter = filt;
+            if (delay!=null) p.style.animation = `wf-dash 1.4s linear infinite ${delay}s`;
+            p.classList.add('wf-edge');
+            return p;
+          }
+          function draw() {
+            svg.querySelectorAll('.wf-edge').forEach(e=>e.remove());
+            CONNS.forEach(({from,to,color},i) => {
+              const fp = document.querySelector(`[data-port="${from}"]`);
+              const tp = document.querySelector(`[data-port="${to}"]`);
+              if (!fp||!tp) return;
+              const p1=pc(fp), p2=pc(tp);
+              const dx = Math.max(Math.abs(p2.x-p1.x)*.55, 70);
+              const d  = `M${p1.x},${p1.y} C${p1.x+dx},${p1.y} ${p2.x-dx},${p2.y} ${p2.x},${p2.y}`;
+              svg.appendChild(mp(d, ha(color,.10), 3));
+              svg.appendChild(mp(d, color, 1.8, '7 5', 'url(#wf-glow)', i*.28));
+            });
+          }
+
+          // Drag
+          let dragging=null, ox=0, oy=0;
+          document.querySelectorAll('.wf-node').forEach(node => {
+            node.addEventListener('mousedown', e => {
+              if (e.target.closest('.wf-port')) return;
+              dragging=node; node.classList.add('wf-dragging');
+              node.style.animationPlayState='paused';
+              const nr=node.getBoundingClientRect(), cr=canvas.getBoundingClientRect();
+              ox=e.clientX-(nr.left-cr.left); oy=e.clientY-(nr.top-cr.top);
+              e.preventDefault();
+            });
+          });
+          document.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            const cr=canvas.getBoundingClientRect();
+            dragging.style.left = (e.clientX-cr.left-ox)+'px';
+            dragging.style.top  = (e.clientY-cr.top-oy)+'px';
+          });
+          document.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging.classList.remove('wf-dragging');
+            dragging.style.animationPlayState='';
+            dragging=null;
+          });
+
+          requestAnimationFrame(function loop(){ draw(); requestAnimationFrame(loop); });
+        })();
+        </script>
 
       </div>
     </div>
