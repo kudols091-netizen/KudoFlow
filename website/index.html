@@ -449,6 +449,39 @@
           .wf-n3 { animation:wf-f3 5.7s ease-in-out infinite; }
           .wf-n4 { animation:wf-f4 4.3s ease-in-out infinite; }
           @keyframes wf-dash { to { stroke-dashoffset: -24; } }
+
+          /* ── Reference node periodic highlight ── */
+          @keyframes wf-ref-glow {
+            0%, 28%, 100% {
+              border-color: #3a3a3a;
+              box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+            }
+            12% {
+              border-color: rgba(204,255,0,.65);
+              box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4),
+                          0 0 0 1px rgba(204,255,0,.3),
+                          0 0 22px rgba(204,255,0,.28),
+                          0 0 48px rgba(204,255,0,.1);
+            }
+          }
+          @keyframes wf-ref-sweep {
+            0%   { background-position: 200% 0; opacity:0; }
+            5%   { opacity:1; }
+            22%  { background-position: -100% 0; opacity:1; }
+            30%  { opacity:0; }
+            100% { background-position: -100% 0; opacity:0; }
+          }
+          .wf-preview { position:relative; }
+          #wf-ref .wf-preview::after {
+            content:''; position:absolute; inset:0; border-radius:7px; pointer-events:none;
+            background: linear-gradient(110deg, transparent 20%, rgba(204,255,0,.10) 50%, transparent 80%);
+            background-size: 300% 100%;
+            animation: wf-ref-sweep 5s ease-in-out 2.2s infinite;
+          }
+          #wf-ref {
+            animation: wf-f0 4.6s ease-in-out infinite,
+                       wf-ref-glow 5s ease-in-out 2s infinite;
+          }
         </style>
 
         <script>
