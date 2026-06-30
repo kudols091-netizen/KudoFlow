@@ -121,7 +121,7 @@ class WorkflowEditor {
   ];
   // Phase 6: Migrated to server config (workflow_node_types.config.ui.supports_slug)
   // Fallback array for cold start before server config loads
-  static _FALLBACK_MENTIONABLE_TYPES = ['image', 'text', 'text_extract', 'web_import', 'generate', 'chatgpt', 'grok', 'prompt'];
+  static _FALLBACK_MENTIONABLE_TYPES = ['image', 'text', 'text_extract', 'web_import', 'generate', 'chatgpt', 'grok', 'prompt', 'clipboard_in'];
   static SLUG_MAX_LENGTH = 30;
   static SLUG_PATTERN = /^[a-z][a-z0-9_]{0,29}$/;
   // Phase 2 — Node Reference System: Max mentions limit per prompt
@@ -6632,7 +6632,7 @@ QUY TẮC:
     // 2026-05-31 fix: hiển thị result_text cho cả prompt + text_extract nodes (đều output text).
     // Trước fix: chỉ check 'prompt' → text_extract run xong, result_text persist OK nhưng KHÔNG
     // hiển thị trên Result tab → user click Run không thấy kết quả gì.
-    const TEXT_RESULT_NODE_TYPES = ['prompt', 'text_extract'];
+    const TEXT_RESULT_NODE_TYPES = ['prompt', 'text_extract', 'clipboard_in'];
     // 2026-05-31 defensive: normalize whitespace tại display (cleanup leading + trailing per line,
     // collapse 3+ newlines → 2). Mirror logic WorkflowExecutor._normalizeExtractedText — old
     // result_text stored trước normalize fix sẽ hiển thị clean. CSS .prompt-result-text có
@@ -15199,7 +15199,7 @@ QUY TẮC:
     //   - text: static text content
     //   - text_extract: regex/JSON parse output từ upstream text
     //   - chatgpt/grok: result_text (AI response) — đôi khi user output text rồi feed gen
-    const TEXT_SOURCE_TYPES = ['prompt', 'text', 'text_extract', 'chatgpt', 'grok'];
+    const TEXT_SOURCE_TYPES = ['prompt', 'text', 'text_extract', 'chatgpt', 'grok', 'clipboard_in'];
     let hasUpstreamTextSource = false;
     const node = this.diagramCanvas?.editor?.getNodeFromId(drawflowId);
     if (node) {
@@ -18588,7 +18588,7 @@ QUY TẮC:
     // 2026-05-31: thêm text_extract — output text result mentionable downstream
     // (cùng pattern fix các nơi khác). Trước fix: autocomplete dropdown không hiện
     // text_extract slugs khi user gõ @ trong prompt downstream.
-    const textNodeTypes = ['text', 'prompt', 'text_extract', 'web_import'];
+    const textNodeTypes = ['text', 'prompt', 'text_extract', 'web_import', 'clipboard_in'];
 
     for (const node of allNodes) {
       if (node.drawflowId === currentDrawflowId) continue;

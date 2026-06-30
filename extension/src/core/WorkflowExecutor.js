@@ -315,7 +315,7 @@
    * = Nodes produce data (text hoặc image) mà nodes khác có thể reference
    */
   // Text Extract Node (2026-05-29) added — text_extract output text có thể @reference từ downstream.
-  const MENTIONABLE_NODE_TYPES = ['image', 'text', 'text_extract', 'web_import', 'generate', 'chatgpt', 'grok', 'prompt'];
+  const MENTIONABLE_NODE_TYPES = ['image', 'text', 'text_extract', 'web_import', 'generate', 'chatgpt', 'grok', 'prompt', 'clipboard_in'];
 
   /**
    * Node types có thể sử dụng @mention trong prompt field
@@ -3630,6 +3630,11 @@
         return this._executeWebImportNode(node, workflow, nodeLog);
       }
 
+      // === CLIPBOARD INPUT NODE — đọc clipboard text ===
+      if (node.node_type === 'clipboard_in') {
+        return this._executeClipboardInNode(node, workflow, nodeLog);
+      }
+
       // === Correct upstream result_file_ids cho tất cả node types cần input (kể cả delay pass-through) ===
       const needsInput = ['generate', 'download', 'telegram', 'image', 'delay', 'chatgpt', 'grok'];
       if (needsInput.includes(node.node_type)) {
@@ -3656,11 +3661,11 @@
           if (e.target_node_id !== node.node_id) return false;
           const srcNode = workflow.nodes.find(n => n.node_id === e.source_node_id);
           // 2026-05-31: thêm text_extract — node này output text result để feed downstream.
-          return srcNode && ['prompt', 'text', 'text_extract', 'web_import'].includes(srcNode.node_type);
+          return srcNode && ['prompt', 'text', 'text_extract', 'web_import', 'clipboard_in'].includes(srcNode.node_type);
         });
         if (hasUpstreamPromptNode) {
           node.prompt_source = 'upstream_node';
-          nodeLog('Auto-detect prompt_source = upstream_node (có Prompt/Text/TextExtract/WebImport node connected)');
+          nodeLog('Auto-detect prompt_source = upstream_node (có Prompt/Text/TextExtract/WebImport/Clipboard node connected)');
         } else {
           node.prompt_source = 'textbox';
         }
@@ -3686,7 +3691,7 @@
           if (tgtPort && tgtPort !== 'default' && tgtPort !== 'text') return false;
           const srcNode = workflow.nodes.find(n => n.node_id === e.source_node_id);
           // 2026-05-31: thêm text_extract/web_import — node output text result.
-          if (!srcNode || !['prompt', 'text', 'text_extract', 'web_import'].includes(srcNode.node_type)) return false;
+          if (!srcNode || !['prompt', 'text', 'text_extract', 'web_import', 'clipboard_in'].includes(srcNode.node_type)) return false;
           const text = (srcNode.result_text || srcNode.prompt || '').trim();
           return text.length > 0;
         });
@@ -7539,6 +7544,30 @@
      *   - skip_downstream: mark node._extract_failed → _checkDependencies skip downstream
      *   - fail_workflow: throw error → workflow fail
      */
+    async _executeClipboardInNode(node, workflow, emitLog) {
+      const log = (msg, type = 'info') => emitLog(msg, type);
+      log('Clipboard: đọc clipboard...');
+
+      let text;
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (err) {
+        const e = new Error(`Không đọc được clipboard: ${err.message}`);
+        e.code = 'CLIPBOARD_DENIED';
+        throw e;
+      }
+
+      if (!text || !text.trim()) {
+        const e = new Error('Clipboard rỗng — không có text để đọc');
+        e.code = 'CLIPBOARD_EMPTY';
+        throw e;
+      }
+
+      node.result_text = text.trim();
+      log(`Clipboard: đọc được ${text.trim().length} ký tự`);
+      return { result_text: text.trim() };
+    }
+
     async _executeTextExtractNode(node, workflow, emitLog, startTime) {
       const _now = startTime || Date.now();
       const log = (msg, type = 'info') => emitLog(msg, type);

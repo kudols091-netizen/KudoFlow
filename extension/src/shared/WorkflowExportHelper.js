@@ -40,7 +40,7 @@ class WorkflowExportHelper {
 
       // Phase 1 — Node Reference System: Export slug + mention mode fields for mentionable nodes.
       // 2026-05-31: thêm text_extract — output text result mentionable downstream.
-      const isMentionable = ['image', 'text', 'text_extract', 'generate', 'chatgpt', 'grok', 'prompt'].includes(t);
+      const isMentionable = ['image', 'text', 'text_extract', 'generate', 'chatgpt', 'grok', 'prompt', 'clipboard_in'].includes(t);
       if (isMentionable && node.slug) exportNode.slug = node.slug;
       if (isMentionable && node.slug_auto !== undefined) exportNode.slug_auto = node.slug_auto;
       // prompt_mode and ref_mode only for nodes that can use @mentions

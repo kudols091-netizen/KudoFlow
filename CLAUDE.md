@@ -72,14 +72,16 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Invoke it via the Agent tool with `subagent_type: "samplecode-researcher"` whenever you need targeted research on Samplecode contents.
 - This agent is read-only and scoped to the Samplecode folder — it never writes or edits files, and never acts outside that folder.
 
-## 6. Ngôn Ngữ Phản Hồi
+## 6. Ngôn Ngữ & Phong Cách Phản Hồi
 
-**Luôn trả lời bằng tiếng Việt có dấu đầy đủ.**
+**Luôn trả lời bằng tiếng Việt có dấu đầy đủ. Tập trung làm, ít hỏi.**
 
 - Mọi giải thích, tóm tắt, hướng dẫn và thông báo đều phải viết bằng tiếng Việt.
 - Không tự ý chuyển sang tiếng Anh dù câu hỏi hay ngữ cảnh bằng tiếng Anh.
 - Thuật ngữ kỹ thuật (tên hàm, tên file, tên endpoint, v.v.) giữ nguyên tiếng Anh trong dấu nháy hoặc backtick — phần giải thích xung quanh vẫn bằng tiếng Việt.
 - Nếu phải trình bày code, comment trong code có thể bằng tiếng Anh để nhất quán với codebase hiện có.
+- **Ưu tiên làm ngay** thay vì hỏi clarification — nếu có nhiều cách hiểu, chọn cách hợp lý nhất rồi làm, sau đó brief kết quả.
+- **Sau mỗi thay đổi**, đưa ra ngắn gọn: cái gì đã làm, có điểm nào cần chú ý / cần review không.
 
 ## 7. Project Structure
 
