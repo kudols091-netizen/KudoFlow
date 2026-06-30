@@ -1,7 +1,7 @@
 async function sendPaymentSuccess({ to, name, plan, billingCycle, amount, orderId, expiresAt }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    console.log('[Mailer] RESEND_API_KEY not set, skipping email to', to);
+    console.log('[Mailer] BREVO_API_KEY not set, skipping email to', to);
     return;
   }
 
@@ -10,7 +10,7 @@ async function sendPaymentSuccess({ to, name, plan, billingCycle, amount, orderI
   const amountFormatted = Number(amount).toLocaleString('vi-VN') + ' đ';
   const expireDate = new Date(expiresAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const fromName = process.env.MAIL_FROM_NAME || 'KudoSkill';
-  const fromEmail = process.env.MAIL_FROM || 'onboarding@resend.dev';
+  const fromEmail = process.env.MAIL_FROM || 'noreply@kudoskill.xyz';
 
   const html = `<!DOCTYPE html>
 <html lang="vi">
@@ -72,23 +72,23 @@ async function sendPaymentSuccess({ to, name, plan, billingCycle, amount, orderI
 </body>
 </html>`;
 
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      'api-key': apiKey,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: `${fromName} <${fromEmail}>`,
-      to: [to],
+      sender: { name: fromName, email: fromEmail },
+      to: [{ email: to, name: name || to }],
       subject: `✅ Thanh toán thành công — Gói ${planLabel} đã được kích hoạt`,
-      html,
+      htmlContent: html,
     }),
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(`Resend error: ${JSON.stringify(data)}`);
-  console.log(`[Mailer] Email sent to ${to} for order ${orderId} — id: ${data.id}`);
+  if (!res.ok) throw new Error(`Brevo error: ${JSON.stringify(data)}`);
+  console.log(`[Mailer] Email sent to ${to} for order ${orderId} — id: ${data.messageId}`);
 }
 
 module.exports = { sendPaymentSuccess };
