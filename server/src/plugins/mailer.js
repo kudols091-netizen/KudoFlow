@@ -7,8 +7,8 @@ function getTransporter() {
   if (_transporter) return _transporter;
   _transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.MAIL_PORT || '465'),
-    secure: process.env.MAIL_PORT ? process.env.MAIL_PORT !== '587' : true,
+    port: parseInt(process.env.MAIL_PORT || '587'),
+    secure: process.env.MAIL_PORT ? process.env.MAIL_PORT === '465' : false,
     // Force IPv4 — Railway outbound IPv6 is unreachable for Gmail SMTP
     lookup: (hostname, options, cb) => dns.resolve4(hostname, (err, addrs) => {
       if (err) return cb(err);
