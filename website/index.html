@@ -450,38 +450,45 @@
           .wf-n4 { animation:wf-f4 4.3s ease-in-out infinite; }
           @keyframes wf-dash { to { stroke-dashoffset: -24; } }
 
-          /* ── Reference node periodic highlight ── */
-          @keyframes wf-ref-glow {
-            0%, 28%, 100% {
+          /* ── Sequential node highlight: Ref → P1 → ChatGPT → P2 → Flow ── */
+          @keyframes wf-seq {
+            0%, 20%, 100% {
               border-color: #3a3a3a;
               box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
             }
-            12% {
-              border-color: rgba(204,255,0,.65);
+            10% {
+              border-color: rgba(204,255,0,.7);
               box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4),
-                          0 0 0 1px rgba(204,255,0,.3),
-                          0 0 22px rgba(204,255,0,.28),
-                          0 0 48px rgba(204,255,0,.1);
+                          0 0 0 1px rgba(204,255,0,.35),
+                          0 0 24px rgba(204,255,0,.3),
+                          0 0 50px rgba(204,255,0,.12);
             }
           }
-          @keyframes wf-ref-sweep {
+          @keyframes wf-seq-sweep {
             0%   { background-position: 200% 0; opacity:0; }
-            5%   { opacity:1; }
-            22%  { background-position: -100% 0; opacity:1; }
-            30%  { opacity:0; }
-            100% { background-position: -100% 0; opacity:0; }
+            3%   { opacity:1; }
+            17%  { background-position:-100% 0; opacity:1; }
+            22%  { opacity:0; }
+            100% { background-position:-100% 0; opacity:0; }
           }
           .wf-preview { position:relative; }
-          #wf-ref .wf-preview::after {
+          /* Light sweep on image/video nodes */
+          #wf-ref .wf-preview::after,
+          #wf-chatgpt .wf-preview::after,
+          #wf-flow .wf-preview::after {
             content:''; position:absolute; inset:0; border-radius:7px; pointer-events:none;
             background: linear-gradient(110deg, transparent 20%, rgba(204,255,0,.10) 50%, transparent 80%);
             background-size: 300% 100%;
-            animation: wf-ref-sweep 5s ease-in-out 2.2s infinite;
+            animation: wf-seq-sweep 10s ease-in-out 0s infinite;
           }
-          #wf-ref {
-            animation: wf-f0 4.6s ease-in-out infinite,
-                       wf-ref-glow 5s ease-in-out 2s infinite;
-          }
+          #wf-chatgpt .wf-preview::after { animation-delay: 4s; }
+          #wf-flow    .wf-preview::after { animation-delay: 8s; }
+          /* Glow sequence — each node gets a 2s window in the 10s cycle */
+          #wf-ref     { animation: wf-f0 4.6s ease-in-out infinite, wf-seq 10s ease-in-out 0s infinite; }
+          #wf-p1      { animation: wf-f1 5.3s ease-in-out infinite, wf-seq 10s ease-in-out 2s infinite; }
+          #wf-chatgpt { animation: wf-f2 4.9s ease-in-out infinite, wf-seq 10s ease-in-out 4s infinite; }
+          #wf-p2      { animation: wf-f3 5.7s ease-in-out infinite, wf-seq 10s ease-in-out 6s infinite; }
+          #wf-flow    { animation: wf-f4 4.3s ease-in-out infinite, wf-seq 10s ease-in-out 8s infinite; }
         </style>
 
         <script>
@@ -514,8 +521,19 @@
             p.classList.add('wf-edge');
             return p;
           }
+          function bzp(p0,c0,c1,p3,t) {
+            const m=1-t;
+            return {
+              x:m*m*m*p0.x+3*m*m*t*c0.x+3*m*t*t*c1.x+t*t*t*p3.x,
+              y:m*m*m*p0.y+3*m*m*t*c0.y+3*m*t*t*c1.y+t*t*t*p3.y
+            };
+          }
+          function ease(t){ return t<.5?2*t*t:-1+(4-2*t)*t; }
           function draw() {
             svg.querySelectorAll('.wf-edge').forEach(e=>e.remove());
+            const phase=(performance.now()/1000)%10;
+            const activeIdx=phase<2?0:phase<4?1:phase<6?2:phase<8?3:-1;
+            const localT=ease((phase%2)/2);
             CONNS.forEach(({from,to,color},i) => {
               const fp = document.querySelector(`[data-port="${from}"]`);
               const tp = document.querySelector(`[data-port="${to}"]`);
@@ -523,8 +541,22 @@
               const p1=pc(fp), p2=pc(tp);
               const dx = Math.max(Math.abs(p2.x-p1.x)*.55, 70);
               const d  = `M${p1.x},${p1.y} C${p1.x+dx},${p1.y} ${p2.x-dx},${p2.y} ${p2.x},${p2.y}`;
-              svg.appendChild(mp(d, ha(color,.10), 3));
-              svg.appendChild(mp(d, color, 1.8, '7 5', 'url(#wf-glow)', i*.28));
+              const isActive=i===activeIdx;
+              svg.appendChild(mp(d, ha(color, isActive?.22:.08), isActive?4:2.5));
+              svg.appendChild(mp(d, color, isActive?2.2:1.5, '7 5', 'url(#wf-glow)', i*.28));
+              if (isActive) {
+                const c0={x:p1.x+dx,y:p1.y}, c1={x:p2.x-dx,y:p2.y};
+                [[0,5,1],[.07,3.5,.5],[.14,2,.22]].forEach(([off,r,op])=>{
+                  const t2=Math.max(0,localT-off);
+                  const pos=bzp(p1,c0,c1,p2,t2);
+                  const circ=document.createElementNS('http://www.w3.org/2000/svg','circle');
+                  circ.setAttribute('cx',pos.x); circ.setAttribute('cy',pos.y);
+                  circ.setAttribute('r',r); circ.setAttribute('fill',color);
+                  circ.setAttribute('opacity',op); circ.style.filter='url(#wf-glow)';
+                  circ.classList.add('wf-edge');
+                  svg.appendChild(circ);
+                });
+              }
             });
           }
 
