@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Hướng dẫn sử dụng — KudoSkill</title>
+  <meta name="description" content="Hướng dẫn đầy đủ về KudoSkill — từ cài đặt đến sử dụng Workflow Builder, Batch Generate, Telegram Bot và nhiều tính năng khác."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#111111;--surface:#1a1a1a;--surface2:#242428;--border:rgba(255,255,255,0.07);
+      --lime:#ccff00;--blue:#335AF5;--light:#e8e8ea;--mid:#71717a;--dim:#3a3a40;
+    }
+    body{background:var(--bg);color:var(--light);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+    ::selection{background:rgba(204,255,0,0.2)}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+
+    /* ── NAV TOP ── */
+    .topbar{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      height:56px;display:flex;align-items:center;justify-content:space-between;
+      padding:0 24px;
+      background:rgba(17,17,17,0.9);backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+    }
+    .topbar-left{display:flex;align-items:center;gap:12px}
+    .wordmark{font-family:'Inter Tight',Inter,sans-serif;font-weight:800;font-size:16px;letter-spacing:-.02em;color:#fff;text-decoration:none}
+    .wordmark em{color:var(--lime);font-style:normal}
+    .topbar-divider{color:var(--dim);font-size:18px;font-weight:300}
+    .topbar-section{font-size:14px;font-weight:500;color:var(--mid)}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .btn-home{font-size:13px;font-weight:500;color:var(--mid);text-decoration:none;transition:color .2s}
+    .btn-home:hover{color:var(--light)}
+    .btn-cta{font-size:13px;font-weight:700;background:var(--lime);color:#111;padding:7px 16px;border-radius:8px;text-decoration:none;transition:background .2s}
+    .btn-cta:hover{background:#d9ff33}
+
+    /* ── LAYOUT ── */
+    .layout{display:flex;padding-top:56px;min-height:100vh}
+
+    /* ── SIDEBAR ── */
+    .sidebar{
+      width:220px;flex-shrink:0;position:fixed;top:56px;left:0;bottom:0;
+      overflow-y:auto;padding:20px 12px;
+      border-right:1px solid var(--border);
+      background:var(--bg);
+    }
+    .sidebar-group{margin-bottom:20px}
+    .sidebar-label{font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.1em;padding:0 8px;margin-bottom:6px}
+    .sidebar-link{
+      display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;
+      font-size:13px;font-weight:500;color:var(--mid);text-decoration:none;
+      transition:background .15s,color .15s;cursor:pointer;
+    }
+    .sidebar-link:hover{background:rgba(255,255,255,0.05);color:var(--light)}
+    .sidebar-link.active{background:rgba(204,255,0,0.1);color:var(--lime)}
+    .sidebar-link svg{flex-shrink:0;opacity:.7}
+    .sidebar-link.active svg{opacity:1}
+
+    /* ── CONTENT ── */
+    .content{margin-left:220px;flex:1;padding:48px 56px 80px;max-width:820px}
+    @media(max-width:900px){
+      .sidebar{display:none}
+      .content{margin-left:0;padding:32px 24px 60px}
+    }
+
+    /* ── SECTIONS ── */
+    .guide-section{margin-bottom:72px;scroll-margin-top:72px}
+    .section-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+      color:var(--lime);background:rgba(204,255,0,0.08);
+      border:1px solid rgba(204,255,0,0.15);
+      padding:4px 10px;border-radius:20px;margin-bottom:14px;
+    }
+    .section-title{font-family:'Inter Tight',Inter,sans-serif;font-size:28px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:10px;line-height:1.15}
+    .section-desc{font-size:15px;color:var(--mid);line-height:1.7;margin-bottom:28px;max-width:640px}
+
+    /* Video placeholder */
+    .video-box{
+      background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      overflow:hidden;margin-bottom:28px;
+    }
+    .video-topbar{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.3)}
+    .vdot{width:10px;height:10px;border-radius:50%}
+    .video-embed{position:relative;padding-top:56.25%;background:#0a0a0f}
+    .video-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
+    .video-placeholder{
+      position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+      background:linear-gradient(135deg,#12121a 0%,#1a1a28 100%);
+    }
+    .play-btn{
+      width:56px;height:56px;border-radius:50%;background:rgba(204,255,0,.15);border:2px solid rgba(204,255,0,.3);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;
+      transition:background .2s,transform .2s;
+    }
+    .play-btn:hover{background:rgba(204,255,0,.25);transform:scale(1.08)}
+    .video-label{font-size:13px;font-weight:600;color:var(--mid)}
+
+    /* Steps */
+    .steps{display:flex;flex-direction:column;gap:16px;margin-bottom:28px}
+    .step{display:flex;gap:16px;align-items:flex-start;padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;transition:border-color .2s}
+    .step:hover{border-color:rgba(204,255,0,.2)}
+    .step-num{width:30px;height:30px;border-radius:50%;background:var(--lime);color:#111;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+    .step-body h4{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+    .step-body p{font-size:13px;color:var(--mid);line-height:1.6}
+    .step-body code{background:rgba(255,255,255,.07);border-radius:5px;padding:1px 6px;font-size:12px;font-family:monospace;color:var(--lime)}
+
+    /* Tips */
+    .tip{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.6}
+    .tip.lime{background:rgba(204,255,0,.06);border:1px solid rgba(204,255,0,.15);color:#b8e600}
+    .tip.blue{background:rgba(51,90,245,.08);border:1px solid rgba(51,90,245,.2);color:#7ba7ff}
+    .tip.yellow{background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.2);color:#ca8a04}
+    .tip-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+    /* Feature grid */
+    .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px}
+    @media(max-width:600px){.feat-grid{grid-template-columns:1fr}}
+    .feat-item{padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;transition:border-color .2s}
+    .feat-item:hover{border-color:rgba(204,255,0,.2)}
+    .feat-item h5{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+    .feat-item p{font-size:12px;color:var(--mid);line-height:1.5}
+    .feat-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);flex-shrink:0}
+
+    /* Divider */
+    hr{border:none;border-top:1px solid var(--border);margin:0 0 72px}
+
+    /* Inline badge */
+    .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+    .badge.lime{background:rgba(204,255,0,.12);color:var(--lime)}
+    .badge.blue{background:rgba(51,90,245,.15);color:#7ba7ff}
+    .badge.green{background:rgba(34,197,94,.1);color:#4ade80}
+    .badge.orange{background:rgba(249,115,22,.1);color:#fb923c}
+
+    /* TOC mobile */
+    .mobile-toc{display:none;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:32px}
+    @media(max-width:900px){.mobile-toc{display:block}}
+    .mobile-toc summary{font-size:14px;font-weight:700;cursor:pointer;color:var(--light)}
+    .mobile-toc ul{margin-top:12px;display:flex;flex-direction:column;gap:6px;padding-left:4px;list-style:none}
+    .mobile-toc a{font-size:13px;color:var(--mid);text-decoration:none}
+    .mobile-toc a:hover{color:var(--lime)}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a href="/" class="wordmark">Kudo<em>Skill</em></a>
+    <span class="topbar-divider">/</span>
+    <span class="topbar-section">Hướng dẫn</span>
+  </div>
+  <div class="topbar-right">
+    <a href="/" class="btn-home">Trang chủ</a>
+    <a href="/login" class="btn-cta">Đăng ký miễn phí</a>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-label">Bắt đầu</div>
+      <a class="sidebar-link active" href="#getting-started" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Bắt đầu
+      </a>
+      <a class="sidebar-link" href="#install" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Cài đặt Extension
+      </a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-label">Tính năng</div>
+      <a class="sidebar-link" href="#workflow-builder" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 17.5L21 21M14 17.5h3.5v3.5"/></svg>
+        Workflow Builder
+      </a>
+      <a class="sidebar-link" href="#batch-generate" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Batch Generate
+      </a>
+      <a class="sidebar-link" href="#multi-task" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Multi-task Queue
+      </a>
+      <a class="sidebar-link" href="#auto-download" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Auto Download
+      </a>
+      <a class="sidebar-link" href="#multi-ai" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m12 8-2 4h4l-2 4"/></svg>
+        Đa nền tảng AI
+      </a>
+      <a class="sidebar-link" href="#telegram" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>
+        Telegram Bot
+      </a>
+      <a class="sidebar-link" href="#mcp" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        AI Agent (MCP)
+      </a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-label">Tài khoản</div>
+      <a class="sidebar-link" href="#plans" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Gói dịch vụ
+      </a>
+      <a class="sidebar-link" href="#faq" onclick="setActive(this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        FAQ
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="content">
+
+    <!-- Mobile TOC -->
+    <details class="mobile-toc">
+      <summary>📋 Mục lục</summary>
+      <ul>
+        <li><a href="#getting-started">Bắt đầu</a></li>
+        <li><a href="#install">Cài đặt Extension</a></li>
+        <li><a href="#workflow-builder">Workflow Builder</a></li>
+        <li><a href="#batch-generate">Batch Generate</a></li>
+        <li><a href="#multi-task">Multi-task Queue</a></li>
+        <li><a href="#auto-download">Auto Download</a></li>
+        <li><a href="#multi-ai">Đa nền tảng AI</a></li>
+        <li><a href="#telegram">Telegram Bot</a></li>
+        <li><a href="#mcp">AI Agent (MCP)</a></li>
+        <li><a href="#plans">Gói dịch vụ</a></li>
+      </ul>
+    </details>
+
+    <!-- ── GETTING STARTED ── -->
+    <section id="getting-started" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Bắt đầu
+      </div>
+      <h1 class="section-title">Chào mừng đến với KudoSkill</h1>
+      <p class="section-desc">KudoSkill là Chrome Extension giúp bạn tự động hóa các tác vụ AI — kéo thả node, kết nối ChatGPT · Grok · Gemini · Google Flow trong một workflow, chạy hàng loạt mà không cần code.</p>
+
+      <div class="feat-grid">
+        <div class="feat-item">
+          <h5><span class="feat-dot"></span>Workflow Builder</h5>
+          <p>Kéo thả node, kết nối AI bằng mũi tên. Không cần code.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#7ba7ff"></span>Batch Generate</h5>
+          <p>Submit hàng chục prompt cùng lúc, auto-retry khi lỗi.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#4ade80"></span>Multi-task Queue</h5>
+          <p>Chạy song song nhiều job, tránh quota throttling.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#fb923c"></span>Auto Download</h5>
+          <p>Tự động lưu ảnh với tên file template (date, prompt, index).</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#c084fc"></span>Telegram Bot</h5>
+          <p>Nhận kết quả AI trực tiếp qua Telegram.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#f472b6"></span>AI Agent (MCP)</h5>
+          <p>Ra lệnh bằng ngôn ngữ tự nhiên cho Claude điều khiển workflow.</p>
+        </div>
+      </div>
+
+      <div class="tip lime">
+        <span class="tip-icon">💡</span>
+        <span><strong>Mẹo:</strong> Bạn không cần API key riêng — KudoSkill dùng phiên đăng nhập ChatGPT, Grok, Gemini đang mở trên trình duyệt.</span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── INSTALL ── -->
+    <section id="install" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Cài đặt
+      </div>
+      <h2 class="section-title">Cài đặt Extension</h2>
+      <p class="section-desc">Cài KudoSkill từ Chrome Web Store trong vòng 30 giây — không cần cấu hình thêm gì.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Mở Chrome Web Store</h4>
+            <p>Truy cập Chrome Web Store, tìm kiếm <code>KudoSkill</code> hoặc click link cài đặt trực tiếp trên trang chủ.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Bấm "Thêm vào Chrome"</h4>
+            <p>Xác nhận cài đặt trong hộp thoại hiện ra. Extension sẽ tự tải về và cài trong vài giây.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Đăng ký tài khoản</h4>
+            <p>Click vào icon KudoSkill trên thanh toolbar → <code>Đăng ký</code>. Dùng thử miễn phí 7 ngày, không cần thẻ tín dụng.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Mở tab AI và bắt đầu</h4>
+            <p>Mở tab ChatGPT, Grok, hoặc Gemini. Click icon KudoSkill → sidebar xuất hiện bên phải. Bạn đã sẵn sàng!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip blue">
+        <span class="tip-icon">ℹ️</span>
+        <span><strong>Cốc Cốc & Edge:</strong> KudoSkill hoạt động trên mọi trình duyệt nền Chromium — Cốc Cốc, Edge, Brave — cài bình thường từ Chrome Web Store.</span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── WORKFLOW BUILDER ── -->
+    <section id="workflow-builder" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 17.5L21 21M14 17.5h3.5v3.5"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">Workflow Builder</h2>
+      <p class="section-desc">Xây dựng chuỗi tác vụ AI bằng giao diện kéo thả. Kết nối các node với nhau — kết quả của node trước tự động truyền vào node sau.</p>
+
+      <div class="video-box">
+        <div class="video-topbar">
+          <div class="vdot" style="background:#ff5f57"></div>
+          <div class="vdot" style="background:#febc2e"></div>
+          <div class="vdot" style="background:#28c840"></div>
+          <span style="font-size:11px;color:var(--mid);margin-left:8px">KudoSkill — Workflow Builder Demo</span>
+        </div>
+        <div class="video-embed">
+          <div class="video-placeholder">
+            <div class="play-btn">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#ccff00"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <span class="video-label">Video hướng dẫn Workflow Builder</span>
+            <span style="font-size:12px;color:var(--dim)">Coming soon</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Tạo Workflow mới</h4>
+            <p>Vào sidebar KudoSkill → tab <code>Workflow</code> → bấm <code>+ Tạo mới</code> hoặc chọn template có sẵn.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Thêm Node AI</h4>
+            <p>Kéo node từ panel trái vào canvas. Mỗi node đại diện cho một bước — ChatGPT, Grok, Gemini, hoặc Google Flow.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Kết nối các Node</h4>
+            <p>Kéo mũi tên từ output của node này sang input của node khác. Kết quả sẽ tự động truyền qua.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Nhập Prompt & Run</h4>
+            <p>Click vào node, nhập prompt. Bấm <code>▶ Run</code> — toàn bộ chuỗi tự chạy, kết quả hiển thị real-time.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip lime">
+        <span class="tip-icon">💡</span>
+        <span><strong>Dùng biến:</strong> Nhập <code>{"{"}{"{"}input{"}"}{"}"}</code> trong prompt để nhận giá trị từ node trước. Ví dụ: <em>"Dịch đoạn văn sau sang tiếng Anh: {"{"}{"{"} input {"}"}{"}"}"</em></span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── BATCH GENERATE ── -->
+    <section id="batch-generate" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">Batch Generate</h2>
+      <p class="section-desc">Submit hàng chục prompt trong một lần click. KudoSkill tự xử lý lần lượt, auto-retry khi gặp lỗi, tải ảnh/text về với tên file template.</p>
+
+      <div class="feat-grid">
+        <div class="feat-item">
+          <h5><span class="feat-dot"></span>Multi-prompt</h5>
+          <p>Nhập danh sách prompt, chạy toàn bộ không cần giám sát.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot"></span>Auto-retry</h5>
+          <p>Tự thử lại khi AI bị lỗi hoặc quota hết — không bỏ sót prompt nào.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot"></span>Tên file template</h5>
+          <p>Đặt tên file theo <code>date</code>, <code>prompt</code>, <code>index</code> tự động.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot"></span>Queue thông minh</h5>
+          <p>Kiểm soát tốc độ để tránh bị giới hạn rate của từng nền tảng AI.</p>
+        </div>
+      </div>
+
+      <div class="tip yellow">
+        <span class="tip-icon">⚠️</span>
+        <span><strong>Lưu ý:</strong> Mỗi nền tảng AI có giới hạn request khác nhau. KudoSkill tự điều chỉnh tốc độ nhưng bạn nên giữ số lượng batch dưới 50 prompt/lần để tránh bị tạm khóa.</span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── MULTI-TASK ── -->
+    <section id="multi-task" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">Multi-task Queue</h2>
+      <p class="section-desc">Chạy nhiều workflow song song trên cùng lúc. KudoSkill quản lý hàng đợi thông minh — tối ưu throughput mà không vi phạm quota.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Thêm nhiều task vào Queue</h4>
+            <p>Từ Workflow Builder, bấm <code>Add to Queue</code> cho từng workflow muốn chạy song song.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Cấu hình concurrency</h4>
+            <p>Chọn số job chạy đồng thời (mặc định 3). Cao hơn = nhanh hơn nhưng dễ bị throttle.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Chạy Queue</h4>
+            <p>Bấm <code>▶ Run Queue</code> — các job tự phân phối, bạn có thể đóng tab và quay lại sau.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── AUTO DOWNLOAD ── -->
+    <section id="auto-download" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">Auto Download</h2>
+      <p class="section-desc">Ảnh và kết quả AI tự động lưu về máy với tên file được đặt theo template — không cần tay tải từng file.</p>
+
+      <div class="feat-grid">
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#fb923c"></span>Template tên file</h5>
+          <p>Dùng biến <code>{date}</code>, <code>{index}</code>, <code>{prompt}</code> để đặt tên tự động.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#fb923c"></span>Cấu trúc thư mục</h5>
+          <p>Tự tạo subfolder theo ngày hoặc tên project.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#fb923c"></span>Ảnh chất lượng cao</h5>
+          <p>Tải ảnh gốc 2K/4K từ Google Flow, không bị nén.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#fb923c"></span>Bulk export</h5>
+          <p>Tải toàn bộ kết quả trong một batch thành file ZIP.</p>
+        </div>
+      </div>
+
+      <div class="tip lime">
+        <span class="tip-icon">💡</span>
+        <span>Ví dụ template: <code>{"{"} date {"}"}_{"{"} index {"}"}_product-shot</code> → tạo ra <code>20260630_001_product-shot.png</code></span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── MULTI AI ── -->
+    <section id="multi-ai" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="m12 8-2 4h4l-2 4"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">Đa nền tảng AI</h2>
+      <p class="section-desc">KudoSkill hỗ trợ 4 nền tảng AI hàng đầu trong cùng một workflow. Chuyển nền tảng tức thì — không cần học lại cách dùng từng tool.</p>
+
+      <div class="feat-grid">
+        <div class="feat-item">
+          <h5>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#10a37f"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"/></svg>
+            ChatGPT
+          </h5>
+          <p>Viết nội dung, phân tích, tóm tắt, dịch thuật. Hỗ trợ GPT-4o.</p>
+        </div>
+        <div class="feat-item">
+          <h5>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1d9bf0" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Grok
+          </h5>
+          <p>Real-time data, phân tích thị trường, nội dung sáng tạo.</p>
+        </div>
+        <div class="feat-item">
+          <h5>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#4285f4"><circle cx="12" cy="12" r="12"/></svg>
+            Gemini
+          </h5>
+          <p>Đa phương tiện, xử lý ảnh, tạo caption, phân tích hình ảnh.</p>
+        </div>
+        <div class="feat-item">
+          <h5>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ccff00" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Google Flow
+          </h5>
+          <p>Sinh ảnh AI chất lượng cao, Imagen 3, xuất 4K.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── TELEGRAM ── -->
+    <section id="telegram" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">Telegram Bot</h2>
+      <p class="section-desc">Kết nối KudoSkill với Telegram — nhận thông báo khi workflow hoàn thành, hoặc gửi lệnh chạy workflow trực tiếp từ điện thoại.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Tạo Bot Telegram</h4>
+            <p>Tìm <code>@BotFather</code> trên Telegram → <code>/newbot</code> → đặt tên → nhận <code>Bot Token</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Kết nối với KudoSkill</h4>
+            <p>Vào KudoSkill → <code>Cài đặt</code> → <code>Telegram</code> → nhập Bot Token → bấm <code>Kết nối</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Xác thực Chat ID</h4>
+            <p>Gửi tin nhắn đến bot vừa tạo → bấm <code>Xác thực</code> trong KudoSkill để liên kết tài khoản.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Nhận thông báo</h4>
+            <p>Từ giờ mỗi khi workflow hoàn thành, kết quả sẽ được gửi về Telegram của bạn tự động.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip blue">
+        <span class="tip-icon">ℹ️</span>
+        <span><strong>Bot cá nhân:</strong> Bạn có thể dùng bot riêng (gói Team) để ẩn branding KudoSkill — khách hàng chỉ thấy tên bot của bạn.</span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── MCP ── -->
+    <section id="mcp" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Tính năng
+      </div>
+      <h2 class="section-title">AI Agent (MCP)</h2>
+      <p class="section-desc">Kết nối Claude hoặc AI hỗ trợ MCP để điều khiển KudoSkill bằng ngôn ngữ tự nhiên — tạo workflow, chạy batch, quản lý kết quả chỉ bằng câu lệnh chat.</p>
+
+      <div class="feat-grid">
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#f472b6"></span>Điều khiển bằng chat</h5>
+          <p>"Tạo workflow gen ảnh sản phẩm và chạy với 10 prompt này"</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#f472b6"></span>Tích hợp Claude</h5>
+          <p>Dùng Claude Desktop hoặc bất kỳ AI client hỗ trợ MCP.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#f472b6"></span>Tự động hóa sâu</h5>
+          <p>AI agent tự lên kế hoạch và thực thi nhiều bước mà không cần can thiệp.</p>
+        </div>
+        <div class="feat-item">
+          <h5><span class="feat-dot" style="background:#f472b6"></span>Read & Write</h5>
+          <p>Agent đọc kết quả, phân tích, và tiếp tục chạy bước tiếp theo.</p>
+        </div>
+      </div>
+
+      <div class="tip yellow">
+        <span class="tip-icon">⚠️</span>
+        <span>Tính năng MCP đang trong giai đoạn <span class="badge orange">Beta</span> — một số lệnh phức tạp có thể chưa hoạt động hoàn hảo. Phản hồi về <a href="mailto:hello@kudoskill.xyz" style="color:inherit">hello@kudoskill.xyz</a>.</span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── PLANS ── -->
+    <section id="plans" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Tài khoản
+      </div>
+      <h2 class="section-title">Gói dịch vụ</h2>
+      <p class="section-desc">KudoSkill có 3 gói — dùng thử miễn phí 7 ngày, không cần thẻ tín dụng.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num" style="background:rgba(255,255,255,.1);color:#fff">F</div>
+          <div class="step-body">
+            <h4>Free Trial <span class="badge lime">7 ngày</span></h4>
+            <p>Toàn bộ tính năng Pro — không giới hạn. Hết 7 ngày chuyển sang Free với giới hạn cơ bản.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:#335AF5">P</div>
+          <div class="step-body">
+            <h4>Pro <span class="badge blue">99K/tháng</span></h4>
+            <p>Workflow không giới hạn, export 4K, priority support 24/7. Tiết kiệm với gói năm 890K.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num" style="background:#7c3aed">T</div>
+          <div class="step-body">
+            <h4>Team <span class="badge" style="background:rgba(124,58,237,.15);color:#a78bfa">299K/tháng</span></h4>
+            <p>5 tài khoản thành viên, workspace chia sẻ, bot Telegram riêng, dedicated support.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip lime">
+        <span class="tip-icon">💡</span>
+        <span>Nâng cấp ngay trong extension: click icon KudoSkill → <code>Nâng cấp</code> → thanh toán qua chuyển khoản ngân hàng, xác nhận tự động qua SePay.</span>
+      </div>
+    </section>
+
+    <hr/>
+
+    <!-- ── FAQ ── -->
+    <section id="faq" class="guide-section">
+      <div class="section-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        FAQ
+      </div>
+      <h2 class="section-title">Câu hỏi thường gặp</h2>
+      <p class="section-desc">Những thắc mắc phổ biến nhất từ người dùng KudoSkill.</p>
+
+      <div class="steps">
+        <div class="step" style="flex-direction:column;gap:6px;cursor:default">
+          <h4 style="color:#fff;font-size:14px;font-weight:700">KudoSkill có cần API key không?</h4>
+          <p style="font-size:13px;color:var(--mid);line-height:1.6">Không. KudoSkill dùng phiên đăng nhập sẵn có của bạn trên các tab ChatGPT, Grok, Gemini đang mở. Bạn không cần mua thêm API key hay trả tiền cho từng nền tảng.</p>
+        </div>
+        <div class="step" style="flex-direction:column;gap:6px;cursor:default">
+          <h4 style="color:#fff;font-size:14px;font-weight:700">Dữ liệu workflow có bị mất khi hết trial không?</h4>
+          <p style="font-size:13px;color:var(--mid);line-height:1.6">Không. Tất cả workflow được lưu trên tài khoản. Khi hết trial bạn không thể chạy thêm workflow mới nhưng dữ liệu vẫn được giữ nguyên đến khi nâng cấp.</p>
+        </div>
+        <div class="step" style="flex-direction:column;gap:6px;cursor:default">
+          <h4 style="color:#fff;font-size:14px;font-weight:700">Extension có hoạt động trên Cốc Cốc không?</h4>
+          <p style="font-size:13px;color:var(--mid);line-height:1.6">Có. Cốc Cốc dùng nền Chromium tương tự Chrome, bạn cài extension từ Chrome Web Store bình thường.</p>
+        </div>
+        <div class="step" style="flex-direction:column;gap:6px;cursor:default">
+          <h4 style="color:#fff;font-size:14px;font-weight:700">Thanh toán như thế nào?</h4>
+          <p style="font-size:13px;color:var(--mid);line-height:1.6">Chuyển khoản ngân hàng nội địa (TPBank). Hệ thống tự xác nhận qua SePay trong vòng 1-2 phút sau khi nhận tiền. Không cần thẻ quốc tế.</p>
+        </div>
+        <div class="step" style="flex-direction:column;gap:6px;cursor:default">
+          <h4 style="color:#fff;font-size:14px;font-weight:700">Tôi có thể hủy gói bất cứ lúc nào không?</h4>
+          <p style="font-size:13px;color:var(--mid);line-height:1.6">Có. Gói tháng không tự gia hạn — bạn chủ động gia hạn khi muốn. Gói năm áp dụng chính sách hoàn tiền trong 7 ngày nếu không hài lòng.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;padding:20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px">Vẫn còn thắc mắc?</div>
+          <div style="font-size:13px;color:var(--mid)">Liên hệ đội hỗ trợ KudoSkill qua email</div>
+        </div>
+        <a href="mailto:hello@kudoskill.xyz" style="display:inline-flex;align-items:center;gap:8px;background:var(--lime);color:#111;font-size:13px;font-weight:700;padding:9px 18px;border-radius:9px;text-decoration:none;transition:background .2s" onmouseover="this.style.background='#d9ff33'" onmouseout="this.style.background='#ccff00'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          hello@kudoskill.xyz
+        </a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Sidebar active link
+  function setActive(el) {
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Auto-highlight sidebar on scroll
+  const sections = document.querySelectorAll('.guide-section');
+  const links = document.querySelectorAll('.sidebar-link');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        links.forEach(l => {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const el = document.querySelector(a.getAttribute('href'));
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+</script>
+
+</body>
+</html>
