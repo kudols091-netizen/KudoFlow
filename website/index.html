@@ -106,6 +106,34 @@
     .card-hover { transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s; }
     .card-hover:hover { border-color: rgba(204,255,0,0.25); box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(204,255,0,0.08); transform: translateY(-3px); }
 
+    /* Feature card — spotlight + accent hover */
+    .feature-card {
+      position: relative;
+      transition: border-color 0.35s ease, transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(var(--accent-rgb), 0.09), transparent 65%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-card:hover {
+      border-color: rgba(var(--accent-rgb), 0.38) !important;
+      transform: translateY(-5px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(var(--accent-rgb), 0.12), 0 0 24px rgba(var(--accent-rgb), 0.06);
+    }
+    .feature-card > * { position: relative; z-index: 1; }
+    .feature-card .fc-title { transition: color 0.28s ease; }
+    .feature-card:hover .fc-title { color: rgb(var(--accent-rgb)); }
+    .feature-card .fc-icon { transition: transform 0.32s cubic-bezier(.34,1.56,.64,1); }
+    .feature-card:hover .fc-icon { transform: scale(1.12) rotate(-6deg); }
+
     /* Pricing card active */
     .pricing-popular { background: linear-gradient(135deg, rgba(204,255,0,0.08) 0%, rgba(132,204,22,0.04) 100%); }
 
@@ -631,56 +659,56 @@
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
         <!-- Feature 1 -->
-        <div class="bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
-          <div class="w-11 h-11 rounded-xl bg-[#ccff00]/10 border border-[#ccff00]/20 flex items-center justify-center mb-5 text-[#ccff00]">
+        <div class="feature-card bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 animate-on-scroll" style="--accent-rgb:204,255,0">
+          <div class="fc-icon w-11 h-11 rounded-xl bg-[#ccff00]/10 border border-[#ccff00]/20 flex items-center justify-center mb-5 text-[#ccff00]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 17.5L21 21M14 17.5h3.5v3.5"/></svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">Visual Workflow Builder</h3>
+          <h3 class="fc-title text-lg font-bold text-white mb-2">Visual Workflow Builder</h3>
           <p class="text-white/50 text-sm leading-relaxed">Kéo thả node trực quan. Kết nối AI bằng mũi tên. Không cần học cú pháp hay cấu hình phức tạp.</p>
         </div>
 
         <!-- Feature 2 -->
-        <div class="bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
-          <div class="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5 text-blue-400">
+        <div class="feature-card bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 animate-on-scroll" style="--accent-rgb:123,167,255">
+          <div class="fc-icon w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5 text-blue-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-2 4h4l-2 4"/></svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">Đa AI Provider</h3>
+          <h3 class="fc-title text-lg font-bold text-white mb-2">Đa AI Provider</h3>
           <p class="text-white/50 text-sm leading-relaxed">Tích hợp ChatGPT, Grok, Gemini, Google Flow trong cùng một workflow. Dùng điểm mạnh của từng AI.</p>
         </div>
 
         <!-- Feature 3 -->
-        <div class="bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
-          <div class="w-11 h-11 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5 text-green-400">
+        <div class="feature-card bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 animate-on-scroll" style="--accent-rgb:34,197,94">
+          <div class="fc-icon w-11 h-11 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5 text-green-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">Chạy tự động 1 click</h3>
+          <h3 class="fc-title text-lg font-bold text-white mb-2">Chạy tự động 1 click</h3>
           <p class="text-white/50 text-sm leading-relaxed">Nhấn Run — toàn bộ chuỗi node tự chạy theo thứ tự, kết quả truyền từ node này sang node khác.</p>
         </div>
 
         <!-- Feature 4 -->
-        <div class="bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
-          <div class="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-5 text-purple-400">
+        <div class="feature-card bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 animate-on-scroll" style="--accent-rgb:168,85,247">
+          <div class="fc-icon w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-5 text-purple-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">Template có sẵn</h3>
+          <h3 class="fc-title text-lg font-bold text-white mb-2">Template có sẵn</h3>
           <p class="text-white/50 text-sm leading-relaxed">20+ workflow template cho content, marketing, SEO, ecommerce. Load và chạy trong vòng 30 giây.</p>
         </div>
 
         <!-- Feature 5 -->
-        <div class="bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 card-hover animate-on-scroll">
-          <div class="w-11 h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-5 text-orange-400">
+        <div class="feature-card bg-[#1e1e1e] border border-white/[0.07] rounded-2xl p-6 animate-on-scroll" style="--accent-rgb:249,115,22">
+          <div class="fc-icon w-11 h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-5 text-orange-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">Export kết quả</h3>
+          <h3 class="fc-title text-lg font-bold text-white mb-2">Export kết quả</h3>
           <p class="text-white/50 text-sm leading-relaxed">Tải kết quả về dạng text, ảnh (2K/4K). Copy one-click. Chia sẻ trực tiếp từ canvas.</p>
         </div>
 
         <!-- Feature 6 -->
-        <div class="bg-[#1e1e1e] border border-[#ccff00]/15 rounded-2xl p-6 card-hover animate-on-scroll bg-gradient-to-br from-[#ccff00]/5 to-transparent">
-          <div class="w-11 h-11 rounded-xl bg-[#ccff00]/10 border border-[#ccff00]/25 flex items-center justify-center mb-5 text-[#ccff00]">
+        <div class="feature-card bg-[#1e1e1e] border border-[#ccff00]/15 rounded-2xl p-6 animate-on-scroll bg-gradient-to-br from-[#ccff00]/5 to-transparent" style="--accent-rgb:204,255,0">
+          <div class="fc-icon w-11 h-11 rounded-xl bg-[#ccff00]/10 border border-[#ccff00]/25 flex items-center justify-center mb-5 text-[#ccff00]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           </div>
-          <h3 class="text-lg font-bold text-white mb-2">Hoạt động mọi nơi</h3>
+          <h3 class="fc-title text-lg font-bold text-white mb-2">Hoạt động mọi nơi</h3>
           <p class="text-white/50 text-sm leading-relaxed">Chrome Extension chạy song song với mọi website. Sidebar gọn gàng, không chiếm không gian làm việc.</p>
           <div class="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#ccff00]">
             Cài miễn phí
@@ -1000,6 +1028,15 @@
       });
     }, { threshold: 0.1 });
     document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+
+    // Feature card spotlight — follow mouse
+    document.querySelectorAll('.feature-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+        card.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+      });
+    });
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(a => {
