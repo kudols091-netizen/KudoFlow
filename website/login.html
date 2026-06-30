@@ -111,9 +111,25 @@
           </div>
           <button type="submit" id="btn-login" class="btn-lime" style="margin-bottom:16px;">Đăng nhập</button>
           <div style="text-align:right;margin-top:-8px;margin-bottom:16px;">
-            <a href="#" style="font-size:12px;color:#71717a;">Quên mật khẩu?</a>
+            <a href="#" onclick="showForgotPassword(event)" style="font-size:12px;color:#71717a;">Quên mật khẩu?</a>
           </div>
         </form>
+
+        <!-- Forgot Password Form -->
+        <div id="form-forgot" style="display:none;">
+          <div style="margin-bottom:16px;">
+            <div style="font-size:15px;font-weight:700;color:#e8e8ea;margin-bottom:6px;">Quên mật khẩu</div>
+            <div style="font-size:13px;color:#71717a;line-height:1.5;">Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu.</div>
+          </div>
+          <div id="forgot-alert" style="display:none;" class="alert"></div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+            <input id="forgot-email" type="email" placeholder="Email" class="input-field" autocomplete="email" />
+          </div>
+          <button type="button" id="btn-forgot" onclick="handleForgotPassword()" class="btn-lime" style="margin-bottom:16px;">Gửi link đặt lại</button>
+          <div style="text-align:center;">
+            <a href="#" onclick="showLoginForm(event)" style="font-size:13px;color:#71717a;">← Quay lại đăng nhập</a>
+          </div>
+        </div>
 
         <!-- Register Form -->
         <form id="form-register" onsubmit="handleRegister(event)" style="display:none;">
@@ -174,6 +190,56 @@
     localStorage.setItem('kudo_token', token);
     localStorage.setItem('kudo_user', JSON.stringify(user));
     window.location.href = '/dashboard';
+  }
+
+  function showForgotPassword(e) {
+    e.preventDefault();
+    document.getElementById('form-login').style.display = 'none';
+    document.getElementById('form-forgot').style.display = '';
+    // Hide tabs when showing forgot
+    document.querySelector('[id="tab-login"]').parentElement.style.display = 'none';
+    hideAlert();
+  }
+
+  function showLoginForm(e) {
+    e.preventDefault();
+    document.getElementById('form-forgot').style.display = 'none';
+    document.getElementById('form-login').style.display = '';
+    document.querySelector('[id="tab-login"]').parentElement.style.display = 'flex';
+    hideAlert();
+  }
+
+  async function handleForgotPassword() {
+    const email = document.getElementById('forgot-email').value.trim();
+    const alertEl = document.getElementById('forgot-alert');
+    const btn = document.getElementById('btn-forgot');
+
+    const showForgotAlert = (msg, type = 'error') => {
+      alertEl.className = 'alert ' + (type === 'error' ? 'alert-error' : 'alert-success');
+      alertEl.textContent = msg;
+      alertEl.style.display = '';
+    };
+
+    if (!email) { showForgotAlert('Vui lòng nhập email'); return; }
+
+    btn.disabled = true; btn.textContent = 'Đang gửi...';
+    try {
+      const res = await fetch(`${API}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showForgotAlert('Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu.', 'success');
+      } else {
+        showForgotAlert(data.error?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+      }
+    } catch {
+      showForgotAlert('Không thể kết nối. Vui lòng thử lại.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Gửi link đặt lại';
+    }
   }
 
   async function handleLogin(e) {

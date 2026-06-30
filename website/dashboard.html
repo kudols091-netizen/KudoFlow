@@ -140,6 +140,30 @@
       </div>
     </div>
 
+    <!-- Subscription card -->
+    <div class="card" id="subscription-card" style="padding:22px 24px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:4px;">Gói dịch vụ</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="sub-plan-badge" class="badge badge-free">Free</span>
+            <span id="sub-status-badge" style="display:none;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#22c55e;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">Đang hoạt động</span>
+          </div>
+        </div>
+        <div id="sub-action"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:10px;">Tính năng gói hiện tại</div>
+          <ul id="sub-features" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px;"></ul>
+        </div>
+        <div id="sub-expiry-col" style="display:none;">
+          <div style="font-size:12px;color:#71717a;margin-bottom:10px;">Hiệu lực đến</div>
+          <div id="sub-expiry-date" style="font-size:20px;font-family:'Inter Tight',sans-serif;font-weight:900;color:#e8e8ea;">—</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Bottom row: Extension + Upgrade -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div class="card" style="padding:22px 24px;">
@@ -230,7 +254,7 @@
   async function loadDashboard() {
     // Render cached user instantly
     const cached = localStorage.getItem('kudo_user');
-    if (cached) renderUser(JSON.parse(cached));
+    if (cached) { const u = JSON.parse(cached); renderUser(u); renderSubscription(u); }
 
     try {
       const [meRes, summaryRes, workflowsRes] = await Promise.all([
@@ -245,6 +269,7 @@
       if (meData.success) {
         localStorage.setItem('kudo_user', JSON.stringify(meData.data.user));
         renderUser(meData.data.user);
+        renderSubscription(meData.data.user);
       }
 
       const summaryData = await summaryRes.json();
@@ -269,6 +294,53 @@
     const d = new Date();
     document.getElementById('usage-date').textContent =
       d.toLocaleDateString('vi-VN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  const PLAN_FEATURES = {
+    free: ['10 prompts/batch', '5 workflows', 'Lịch sử 50 lần'],
+    trial: ['10 prompts/batch', '5 workflows', 'Lịch sử 50 lần'],
+    pro: ['100 prompts/batch', 'Workflows không giới hạn', 'Lịch sử 500 lần'],
+    team: ['500 prompts/batch', 'Workflows không giới hạn', 'Lịch sử 2000 lần'],
+    lifetime: ['500 prompts/batch', 'Workflows không giới hạn', 'Lịch sử 2000 lần'],
+  };
+
+  function renderSubscription(user) {
+    const plan = (user.plan || 'free').toLowerCase();
+    const isPaid = plan === 'pro' || plan === 'team' || plan === 'lifetime';
+
+    // Plan badge
+    const badge = document.getElementById('sub-plan-badge');
+    badge.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+    badge.className = 'badge ' + (isPaid ? 'badge-pro' : 'badge-free');
+
+    // Status badge (only for paid)
+    document.getElementById('sub-status-badge').style.display = isPaid ? '' : 'none';
+
+    // Action button
+    const actionEl = document.getElementById('sub-action');
+    if (!isPaid) {
+      actionEl.innerHTML = `<a href="/checkout?plan=pro&cycle=monthly" style="display:inline-flex;align-items:center;gap:6px;background:#ccff00;color:#111;border-radius:8px;padding:9px 18px;font-family:'Inter Tight',sans-serif;font-weight:800;font-size:13px;text-decoration:none;">Nâng cấp lên Pro →</a>`;
+    } else {
+      actionEl.innerHTML = '';
+    }
+
+    // Features list
+    const features = PLAN_FEATURES[plan] || PLAN_FEATURES.free;
+    document.getElementById('sub-features').innerHTML = features.map(f =>
+      `<li style="display:flex;align-items:center;gap:8px;font-size:13px;color:#e8e8ea;">
+        <span style="color:#ccff00;font-size:12px;">✓</span>${f}
+      </li>`
+    ).join('');
+
+    // Expiry date
+    const expiryCol = document.getElementById('sub-expiry-col');
+    if (isPaid && user.plan_expires_at) {
+      expiryCol.style.display = '';
+      document.getElementById('sub-expiry-date').textContent =
+        new Date(user.plan_expires_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } else {
+      expiryCol.style.display = 'none';
+    }
   }
 
   function handleLogout() {

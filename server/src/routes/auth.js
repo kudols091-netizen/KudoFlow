@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { query, queryOne } = require('../plugins/db');
 const { createToken, revokeToken } = require('../services/token');
 const { authenticate } = require('../middleware/auth');
+const { sendPasswordReset } = require('../plugins/mailer');
 
 module.exports = async function authRoutes(fastify) {
 
@@ -70,8 +71,40 @@ module.exports = async function authRoutes(fastify) {
   fastify.post('/auth/forgot-password', async (req, reply) => {
     const { email } = req.body || {};
     if (!email) return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'Email required' } });
+
+    try {
+      const user = await queryOne('SELECT id, name, email FROM users WHERE email = ?', [email]);
+      if (user) {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        await query('UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?', [token, expires, user.id]);
+        const resetUrl = `${process.env.WEBSITE_URL}/reset-password?token=${token}`;
+        await sendPasswordReset({ to: user.email, name: user.name, resetUrl }).catch(e => console.error('[Auth] sendPasswordReset error:', e));
+      }
+    } catch (e) {
+      console.error('[Auth] forgot-password error:', e);
+    }
+
     // Always return success to prevent email enumeration
-    return { success: true, message: 'If this email exists, a reset link has been sent.' };
+    return { success: true, message: 'Nếu email tồn tại, chúng tôi đã gửi link đặt lại mật khẩu.' };
+  });
+
+  // POST /auth/reset-password
+  fastify.post('/auth/reset-password', async (req, reply) => {
+    const { token, password } = req.body || {};
+    if (!token || !password) return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'Token and password required' } });
+    if (password.length < 6) return reply.code(400).send({ success: false, error: { code: 'VALIDATION', message: 'Password must be at least 6 characters' } });
+
+    const user = await queryOne(
+      'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires_at > NOW()',
+      [token]
+    );
+    if (!user) return reply.code(400).send({ success: false, error: { code: 'INVALID_TOKEN', message: 'Link đã hết hạn hoặc không hợp lệ.' } });
+
+    const hash = await bcrypt.hash(password, 10);
+    await query('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?', [hash, user.id]);
+
+    return { success: true, message: 'Mật khẩu đã được cập nhật.' };
   });
 
   // POST /auth/resend-verification

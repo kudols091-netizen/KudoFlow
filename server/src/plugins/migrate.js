@@ -200,6 +200,12 @@ async function migrate() {
     await pool.execute(`ALTER TABLE users ADD COLUMN banned TINYINT(1) DEFAULT 0`);
   } catch(e) { /* already exists */ }
 
+  // Add reset token columns (safe to run multiple times)
+  try {
+    await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255) NULL`);
+    await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at DATETIME NULL`);
+  } catch(e) {}
+
   console.log('Migration completed');
 }
 
