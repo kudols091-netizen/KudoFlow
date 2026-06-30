@@ -1,3 +1,94 @@
+const LOCAL_BUILT_IN_TEMPLATES = [
+  {
+    id: 'local_ugc_pose',
+    is_local: true,
+    name: 'UGC Pose Generation',
+    description: 'Tạo 3 dáng pose khác nhau cho avatar UGC từ 1 ảnh reference. Upload ảnh mẫu vào Image node → chỉnh prompt mô tả nhân vật → chạy.',
+    category_name: 'UGC / Marketing',
+    is_premium: false,
+    use_count: 0,
+    settings: { parallel: true, quantity: 1 },
+    nodes: [
+      {
+        node_id: 'local_ugc_n1',
+        node_type: 'image',
+        node_name: 'Avatar Reference',
+        pos_x: 80, pos_y: 150,
+        enabled: true,
+      },
+      {
+        node_id: 'local_ugc_n2',
+        node_type: 'text',
+        node_name: 'Mô tả nhân vật',
+        slug: 'base_desc',
+        slug_auto: false,
+        prompt: 'Young Asian woman, black polo dress, natural makeup, professional product photography, clean white background',
+        prompt_mode: 'all',
+        pos_x: 80, pos_y: 420,
+        enabled: true,
+      },
+      {
+        node_id: 'local_ugc_n3',
+        node_type: 'generate',
+        node_name: 'Pose: Đứng thẳng',
+        prompt: '@base_desc, standing straight, confident smile, looking at camera, full body shot',
+        prompt_mode: 'mention',
+        ref_mode: 'all',
+        media_type: 'Image',
+        ratio: '9:16',
+        quantity: 1,
+        pos_x: 380, pos_y: 80,
+        enabled: true,
+      },
+      {
+        node_id: 'local_ugc_n4',
+        node_type: 'generate',
+        node_name: 'Pose: Cầm sản phẩm',
+        prompt: '@base_desc, holding product in both hands, presenting to camera, UGC marketing style',
+        prompt_mode: 'mention',
+        ref_mode: 'all',
+        media_type: 'Image',
+        ratio: '9:16',
+        quantity: 1,
+        pos_x: 380, pos_y: 310,
+        enabled: true,
+      },
+      {
+        node_id: 'local_ugc_n5',
+        node_type: 'generate',
+        node_name: 'Pose: Ngồi thư giãn',
+        prompt: '@base_desc, sitting casually on chair, relaxed smile, lifestyle shot, soft blurred background',
+        prompt_mode: 'mention',
+        ref_mode: 'all',
+        media_type: 'Image',
+        ratio: '9:16',
+        quantity: 1,
+        pos_x: 380, pos_y: 540,
+        enabled: true,
+      },
+      {
+        node_id: 'local_ugc_n6',
+        node_type: 'download',
+        node_name: 'Tải kết quả',
+        download_resolution: '1k',
+        pos_x: 680, pos_y: 310,
+        enabled: true,
+      },
+    ],
+    edges: [
+      { edge_id: 'local_ugc_e1', source_node_id: 'local_ugc_n1', target_node_id: 'local_ugc_n3', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
+      { edge_id: 'local_ugc_e2', source_node_id: 'local_ugc_n1', target_node_id: 'local_ugc_n4', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
+      { edge_id: 'local_ugc_e3', source_node_id: 'local_ugc_n1', target_node_id: 'local_ugc_n5', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
+      { edge_id: 'local_ugc_e4', source_node_id: 'local_ugc_n2', target_node_id: 'local_ugc_n3', source_handle: 'output_1', target_handle: 'input_2', source_port: 'text', target_port: 'text', data_type: 'text' },
+      { edge_id: 'local_ugc_e5', source_node_id: 'local_ugc_n2', target_node_id: 'local_ugc_n4', source_handle: 'output_1', target_handle: 'input_2', source_port: 'text', target_port: 'text', data_type: 'text' },
+      { edge_id: 'local_ugc_e6', source_node_id: 'local_ugc_n2', target_node_id: 'local_ugc_n5', source_handle: 'output_1', target_handle: 'input_2', source_port: 'text', target_port: 'text', data_type: 'text' },
+      { edge_id: 'local_ugc_e7', source_node_id: 'local_ugc_n3', target_node_id: 'local_ugc_n6', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'media_in', data_type: 'image' },
+      { edge_id: 'local_ugc_e8', source_node_id: 'local_ugc_n4', target_node_id: 'local_ugc_n6', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'media_in', data_type: 'image' },
+      { edge_id: 'local_ugc_e9', source_node_id: 'local_ugc_n5', target_node_id: 'local_ugc_n6', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'media_in', data_type: 'image' },
+    ],
+  },
+];
+
 /**
  * WorkflowTemplateList - Browse and import workflow templates from server
  */
@@ -757,7 +848,7 @@ class WorkflowTemplateList {
       if (append) {
         this.templates = [...this.templates, ...newTemplates];
       } else {
-        this.templates = newTemplates;
+        this.templates = [...LOCAL_BUILT_IN_TEMPLATES, ...newTemplates];
       }
 
       this._renderTemplates();
@@ -1684,6 +1775,14 @@ class WorkflowTemplateList {
    * @param {Object} template
    */
   async _openTemplateInEditor(template) {
+    if (template.is_local) {
+      window.showNotification?.(
+        'Template built-in không có chế độ xem trước. Nhấn "Sử dụng" để import vào workflow của bạn.',
+        'info'
+      );
+      return;
+    }
+
     const t = (key, params) => window.I18n?.t(key, params) || key;
     const dialog = window.customDialog;
 
@@ -2061,6 +2160,11 @@ class WorkflowTemplateList {
         'error'
       );
       return;
+    }
+
+    if (template.is_local) {
+      this._isCopyingTemplate = false;
+      return this._handleImport(template);
     }
 
     // 2026-05-25: Set lock TRƯỚC khi show modal — tránh race mở duplicate confirm modal.
@@ -2536,10 +2640,10 @@ class WorkflowTemplateList {
     let existingNames = [];
     if (window.storageManager) {
       const workflows = await window.storageManager.getWorkflows();
-      existingNames = (workflows || []).map(w => w.wf_name);
+      existingNames = (Array.isArray(workflows) ? workflows : []).map(w => w.wf_name);
     } else {
       const result = await chrome.storage.local.get(['af_workflows']);
-      existingNames = (result.af_workflows || []).map(w => w.wf_name);
+      existingNames = (Array.isArray(result.af_workflows) ? result.af_workflows : []).map(w => w.wf_name);
     }
 
     let name = baseName;
