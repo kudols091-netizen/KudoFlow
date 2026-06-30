@@ -201,10 +201,8 @@ async function migrate() {
   } catch(e) { /* already exists */ }
 
   // Add reset token columns (safe to run multiple times)
-  try {
-    await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255) NULL`);
-    await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at DATETIME NULL`);
-  } catch(e) {}
+  try { await pool.execute(`ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) NULL`); } catch(e) {}
+  try { await pool.execute(`ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME NULL`); } catch(e) {}
 
   console.log('Migration completed');
 }
