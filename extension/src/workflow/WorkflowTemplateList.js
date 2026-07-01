@@ -880,11 +880,14 @@ class WorkflowTemplateList {
         }
       } else {
         console.error('[WorkflowTemplateList] Failed to load templates:', err);
-        if (grid && !append) {
-          grid.innerHTML = '';
+        if (!append) {
+          // Vẫn hiện local built-in templates kể cả khi API fail
+          this.templates = [...LOCAL_BUILT_IN_TEMPLATES];
+          this._renderTemplates();
         }
         if (emptyState) {
-          emptyState.classList.remove('hidden');
+          if (this.templates.length === 0) emptyState.classList.remove('hidden');
+          else emptyState.classList.add('hidden');
         }
       }
     } finally {
