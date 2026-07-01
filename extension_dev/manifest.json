@@ -3,7 +3,7 @@
   "name": "KudoFlow99",
   "short_name": "KudoFlow99",
   "version": "1.1.15",
-  "description": "KudoFlow99 by KudoSkill — Visual AI workflow builder. Automate ChatGPT, Grok & Gemini with drag-and-drop nodes. Batch prompts, smart workflows, auto 2K/4K download.",
+  "description": "Drag-and-drop AI workflow builder. Connect ChatGPT, Grok & Gemini. Run batch prompts, auto-download 2K/4K results. No code needed.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

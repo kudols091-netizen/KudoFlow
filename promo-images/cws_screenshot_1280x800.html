@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KudoFlow99 Screenshot 1280×800</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1280px; height: 800px; overflow: hidden; background: #0e0e0e; font-family: 'Inter', sans-serif; }
+
+  /* ── CHROME BROWSER FRAME ── */
+  .browser {
+    width: 1280px;
+    height: 800px;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+  }
+  .browser-bar {
+    height: 40px;
+    background: #2a2a2a;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #ffbd2e; }
+  .dot-g { background: #28c840; }
+  .url-bar {
+    flex: 1;
+    height: 26px;
+    background: #111;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 11px;
+    color: #71717a;
+    gap: 6px;
+    margin: 0 60px;
+  }
+  .url-bar span { color: #e8e8ea; }
+  .tabs {
+    height: 32px;
+    background: #222;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 8px;
+    gap: 4px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+  }
+  .tab {
+    height: 28px;
+    padding: 0 14px;
+    border-radius: 6px 6px 0 0;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #71717a;
+    background: #1a1a1a;
+  }
+  .tab.active { background: #111111; color: #e8e8ea; }
+  .tab-dot { width: 12px; height: 12px; border-radius: 3px; background: #ccff00; }
+
+  /* ── MAIN APP ── */
+  .app {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    background: #141414;
+    border-right: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sidebar-logo {
+    width: 28px; height: 28px;
+  }
+  .sidebar-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    color: #e8e8ea;
+  }
+  .sidebar-title span { color: #ccff00; }
+
+  .sidebar-section {
+    padding: 12px 12px 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #444;
+  }
+  .node-item {
+    margin: 2px 8px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1px solid #222;
+    background: #1a1a1a;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .node-item:hover { border-color: #333; }
+  .node-icon {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .node-label { font-size: 11px; color: #aaa; font-weight: 500; }
+
+  .sidebar-divider { height: 1px; background: #222; margin: 10px 8px; }
+
+  .run-btn {
+    margin: 12px 8px;
+    height: 36px;
+    background: #ccff00;
+    color: #111;
+    border-radius: 8px;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 10px 8px;
+    border-top: 1px solid #222;
+  }
+  .user-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 7px;
+  }
+  .avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #335AF5, #9b59f5);
+    font-size: 10px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .user-email { font-size: 10px; color: #555; }
+
+  /* ── CANVAS AREA ── */
+  .canvas-wrap {
+    flex: 1;
+    background: #111111;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Dot grid */
+  .dot-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, #252525 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Blue glow */
+  .canvas-glow {
+    position: absolute;
+    width: 600px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(51,90,245,0.08) 0%, transparent 65%);
+    top: 50%; left: 50%;
+    transform: translate(-40%, -50%);
+    pointer-events: none;
+  }
+
+  /* Lime glow top-left */
+  .lime-glow {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(204,255,0,0.06) 0%, transparent 65%);
+    top: -50px; left: -50px;
+    pointer-events: none;
+  }
+
+  /* Toolbar */
+  .canvas-toolbar {
+    position: absolute;
+    top: 16px; left: 16px;
+    display: flex;
+    gap: 6px;
+    z-index: 20;
+  }
+  .toolbar-btn {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 7px;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    font-size: 11px;
+    color: #71717a;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+  .toolbar-btn.active { color: #e8e8ea; border-color: #333; }
+  .kbd {
+    background: #2a2a2a;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 9px;
+    color: #555;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    position: absolute;
+    top: 0; left: 0;
+    height: 3px;
+    width: 65%;
+    background: linear-gradient(90deg, #ccff00, #335AF5);
+    z-index: 30;
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px rgba(204,255,0,0.4);
+  }
+
+  /* Node cards */
+  .node {
+    position: absolute;
+    border-radius: 10px;
+    border: 1px solid #2a2a2a;
+    background: #1a1a1a;
+    overflow: hidden;
+    min-width: 160px;
+  }
+  .node-header {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #222;
+  }
+  .node-icon-sm {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+  .node-h-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .node-h-title { font-family: 'Inter Tight', sans-serif; font-size: 14px; font-weight: 800; color: #e8e8ea; margin-top: 1px; }
+
+  .node-body { padding: 8px 12px; }
+  .node-field {
+    background: #111;
+    border-radius: 5px;
+    padding: 6px 8px;
+    font-size: 10px;
+    color: #71717a;
+    border: 1px solid #222;
+    margin-bottom: 4px;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.4;
+  }
+  .node-field em { color: #aaa; font-style: normal; }
+
+  .node-footer {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #1e1e1e;
+  }
+  .word-count { font-size: 9px; color: #444; }
+  .copy-btn {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: #222;
+    border: 1px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Ports */
+  .port-r {
+    position: absolute;
+    right: -5px; top: 50%;
+    transform: translateY(-50%);
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #111;
+  }
+  .port-l {
+    position: absolute;
+    left: -5px; top: 50%;
+    transform: translateY(-50%);
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #111;
+  }
+
+  /* Node positions */
+  .n-prompt   { top: 130px; left: 80px; width: 170px; border-color: rgba(204,255,0,0.3); }
+  .n-chatgpt  { top: 80px;  left: 330px; width: 175px; border-color: rgba(51,90,245,0.4); background: #12152a; }
+  .n-grok     { top: 260px; left: 330px; width: 175px; border-color: rgba(155,89,245,0.4); background: #160f22; }
+  .n-output   { top: 170px; left: 600px; width: 190px; }
+
+  /* Status dot */
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+  }
+  .dot-run { background: #ccff00; box-shadow: 0 0 6px #ccff00; animation: blink 1s infinite; }
+  .dot-done { background: #335AF5; }
+  .dot-ready { background: #2e2e33; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .node-status { font-size: 9px; color: #555; display: flex; align-items: center; }
+
+  /* Connection lines SVG */
+  .conn-svg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* Spotlight hint */
+  .spotlight-hint {
+    position: absolute;
+    bottom: 20px; right: 20px;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 10px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 20;
+  }
+  .hint-key {
+    background: #2a2a2a;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: #777;
+    border: 1px solid #333;
+    font-family: monospace;
+  }
+
+  /* Count badge */
+  .count-badge {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 11px;
+    color: #71717a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 20;
+  }
+  .count-num { color: #ccff00; font-weight: 700; font-family: 'Inter Tight', sans-serif; }
+
+  /* Bottom lime bar */
+  .lime-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #ccff00 0%, #335AF5 50%, transparent 100%);
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+<div class="browser">
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active">
+      <div class="tab-dot"></div>
+      KudoFlow99 – Workflow Editor
+    </div>
+    <div class="tab">New Tab</div>
+  </div>
+
+  <!-- Browser bar -->
+  <div class="browser-bar">
+    <div class="dot dot-r"></div>
+    <div class="dot dot-y"></div>
+    <div class="dot dot-g"></div>
+    <div class="url-bar">
+      🔒 <span>chrome-extension://kudoflow99/workflow-editor.html</span>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div class="app">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <svg class="sidebar-logo" viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="7" fill="#1e1e1e"/>
+          <line x1="8" y1="6" x2="8" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="14" x2="20" y2="6" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+          <line x1="8" y1="14" x2="20" y2="22" stroke="#e8e8ea" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="11" x2="20" y2="6" stroke="#ccff00" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="20" cy="6" r="2.5" fill="#ccff00"/>
+        </svg>
+        <div class="sidebar-title">Kudo<span>Flow99</span></div>
+      </div>
+
+      <div class="sidebar-section">Nodes</div>
+
+      <div class="node-item">
+        <div class="node-icon" style="background:rgba(204,255,0,0.1);">📝</div>
+        <div class="node-label">Prompt Input</div>
+      </div>
+      <div class="node-item">
+        <div class="node-icon" style="background:rgba(51,90,245,0.15);">🤖</div>
+        <div class="node-label">ChatGPT</div>
+      </div>
+      <div class="node-item">
+        <div class="node-icon" style="background:rgba(155,89,245,0.15);">⚡</div>
+        <div class="node-label">Grok</div>
+      </div>
+      <div class="node-item">
+        <div class="node-icon" style="background:rgba(66,211,146,0.12);">✨</div>
+        <div class="node-label">Gemini</div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section">Output</div>
+      <div class="node-item">
+        <div class="node-icon" style="background:#1e1e1e;">📤</div>
+        <div class="node-label">Result</div>
+      </div>
+      <div class="node-item">
+        <div class="node-icon" style="background:#1e1e1e;">⬇️</div>
+        <div class="node-label">Auto Download</div>
+      </div>
+      <div class="node-item">
+        <div class="node-icon" style="background:#1e1e1e;">🌐</div>
+        <div class="node-label">Web Import</div>
+      </div>
+
+      <div class="run-btn">▶ Run Flow</div>
+
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar">K</div>
+          <div class="user-email">Pro · kudoskill.xyz</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrap">
+      <div class="progress-bar"></div>
+      <div class="dot-grid"></div>
+      <div class="canvas-glow"></div>
+      <div class="lime-glow"></div>
+
+      <!-- Toolbar -->
+      <div class="canvas-toolbar">
+        <div class="toolbar-btn active">Workflow 1</div>
+        <div class="toolbar-btn">+ New</div>
+        <div class="toolbar-btn">Search <span class="kbd">Ctrl K</span></div>
+        <div class="toolbar-btn">Templates</div>
+      </div>
+
+      <!-- Count badge -->
+      <div class="count-badge">
+        Running: <span class="count-num">4 / 12</span> prompts
+      </div>
+
+      <!-- SVG connections -->
+      <svg class="conn-svg" viewBox="0 0 1060 728" style="width:100%;height:100%;">
+        <!-- Prompt → ChatGPT -->
+        <path d="M 250 215 C 290 215, 290 170, 330 170" stroke="#ccff00" stroke-width="1.5" fill="none" opacity="0.5" stroke-dasharray="5,4"/>
+        <!-- Prompt → Grok -->
+        <path d="M 250 215 C 290 215, 290 350, 330 350" stroke="#ccff00" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="5,4"/>
+        <!-- ChatGPT → Output -->
+        <path d="M 505 170 C 545 170, 558 260, 600 260" stroke="#335AF5" stroke-width="1.5" fill="none" opacity="0.6" stroke-dasharray="5,4"/>
+        <!-- Grok → Output -->
+        <path d="M 505 350 C 545 350, 558 280, 600 260" stroke="#9b59f5" stroke-width="1.5" fill="none" opacity="0.5" stroke-dasharray="5,4"/>
+        <!-- Active pulse dot on ChatGPT line -->
+        <circle r="4" fill="#335AF5" opacity="0.9">
+          <animateMotion dur="2s" repeatCount="indefinite" path="M 505 170 C 545 170, 558 260, 600 260"/>
+        </circle>
+        <circle r="3" fill="#ccff00" opacity="0.7">
+          <animateMotion dur="2.5s" repeatCount="indefinite" begin="0.3s" path="M 250 215 C 290 215, 290 170, 330 170"/>
+        </circle>
+      </svg>
+
+      <!-- Node: Prompt -->
+      <div class="node n-prompt">
+        <div class="node-header">
+          <div class="node-icon-sm" style="background:rgba(204,255,0,0.1);">📝</div>
+          <div>
+            <div class="node-h-label" style="color:#ccff00;">Input</div>
+            <div class="node-h-title">Prompt</div>
+          </div>
+        </div>
+        <div class="node-body">
+          <div class="node-field"><em>Write a product description for {product_name} targeting {audience}...</em></div>
+        </div>
+        <div class="node-footer">
+          <div class="node-status"><span class="status-dot dot-run"></span>Sending</div>
+          <div class="word-count">12 prompts</div>
+        </div>
+        <div class="port-r" style="border-color:#ccff00;"></div>
+      </div>
+
+      <!-- Node: ChatGPT -->
+      <div class="node n-chatgpt">
+        <div class="node-header">
+          <div class="node-icon-sm" style="background:rgba(51,90,245,0.2);">🤖</div>
+          <div>
+            <div class="node-h-label" style="color:#335AF5;">AI Model</div>
+            <div class="node-h-title">ChatGPT</div>
+          </div>
+        </div>
+        <div class="node-body">
+          <div class="node-field" style="color:#335AF5;opacity:0.7;font-size:9px;">gpt-4o · Temperature 0.8</div>
+          <div class="node-field"><em>A revolutionary smartwatch that tracks your health in real-time, designed for busy professionals...</em></div>
+        </div>
+        <div class="node-footer">
+          <div class="node-status"><span class="status-dot dot-run"></span>Running</div>
+          <div class="copy-btn">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="#555" stroke-width="1.2"/>
+              <path d="M2 8V2h6" stroke="#555" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="port-l" style="border-color:#335AF5;"></div>
+        <div class="port-r" style="border-color:#335AF5;"></div>
+      </div>
+
+      <!-- Node: Grok -->
+      <div class="node n-grok">
+        <div class="node-header">
+          <div class="node-icon-sm" style="background:rgba(155,89,245,0.2);">⚡</div>
+          <div>
+            <div class="node-h-label" style="color:#9b59f5;">AI Model</div>
+            <div class="node-h-title">Grok</div>
+          </div>
+        </div>
+        <div class="node-body">
+          <div class="node-field" style="color:#9b59f5;opacity:0.7;font-size:9px;">grok-3 · Temperature 0.7</div>
+          <div class="node-field"><em>Stay ahead of the curve with this cutting-edge wearable that monitors vitals, sleep patterns...</em></div>
+        </div>
+        <div class="node-footer">
+          <div class="node-status"><span class="status-dot dot-done"></span>Done 4/12</div>
+          <div class="copy-btn">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="#555" stroke-width="1.2"/>
+              <path d="M2 8V2h6" stroke="#555" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="port-l" style="border-color:#9b59f5;"></div>
+        <div class="port-r" style="border-color:#9b59f5;"></div>
+      </div>
+
+      <!-- Node: Output -->
+      <div class="node n-output">
+        <div class="node-header">
+          <div class="node-icon-sm" style="background:#1e1e1e;">📤</div>
+          <div>
+            <div class="node-h-label" style="color:#ccff00;">Output</div>
+            <div class="node-h-title">Result</div>
+          </div>
+        </div>
+        <div class="node-body">
+          <div class="node-field" style="font-size:9px;color:#555;">Auto-download as TXT when complete</div>
+          <div class="node-field">
+            <span style="color:#ccff00;font-size:9px;">✓</span> <em>4 results ready</em>
+          </div>
+        </div>
+        <div class="node-footer">
+          <div class="node-status"><span class="status-dot dot-done"></span>4 / 12</div>
+          <div style="font-size:10px;color:#335AF5;font-weight:600;cursor:pointer;">↓ Download</div>
+        </div>
+        <div class="port-l" style="border-color:#333;"></div>
+      </div>
+
+      <!-- Spotlight hint -->
+      <div class="spotlight-hint">
+        <span class="hint-key">Ctrl</span>+<span class="hint-key">K</span>
+        Quick add node
+      </div>
+
+      <div class="lime-bar"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=440">
+<title>CWS Small Tile 440×280</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;700;800;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 440px;
+    height: 280px;
+    overflow: hidden;
+    background: #111111;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .canvas {
+    width: 440px;
+    height: 280px;
+    background: #111111;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Dot grid background */
+  .dot-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, #2e2e33 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.5;
+  }
+
+  /* Lime glow radial */
+  .lime-glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(204,255,0,0.12) 0%, transparent 70%);
+    top: -60px;
+    left: -60px;
+    pointer-events: none;
+  }
+
+  /* Top-left: Logo + wordmark */
+  .brand-block {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* K-node SVG mark */
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  .wordmark {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    color: #e8e8ea;
+    line-height: 1;
+  }
+  .wordmark span {
+    color: #ccff00;
+  }
+
+  /* Tagline */
+  .tagline {
+    position: absolute;
+    top: 70px;
+    left: 24px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: #71717a;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+  }
+
+  /* Bottom badge */
+  .badge {
+    position: absolute;
+    bottom: 22px;
+    left: 24px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    color: #71717a;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* Workflow nodes area — right side */
+  .workflow-area {
+    position: absolute;
+    top: 30px;
+    right: 20px;
+    width: 200px;
+    height: 220px;
+  }
+
+  /* SVG canvas for node connections */
+  .workflow-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* Node cards */
+  .node {
+    position: absolute;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border: 1px solid #2e2e33;
+    backdrop-filter: blur(4px);
+  }
+
+  .node-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.6;
+  }
+
+  .node-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #e8e8ea;
+    white-space: nowrap;
+  }
+
+  /* Node dot (port) */
+  .node-port-right {
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid #ccff00;
+    background: #111111;
+  }
+  .node-port-left {
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid #ccff00;
+    background: #111111;
+  }
+
+  /* Node 1 — Text / Prompt */
+  .node-1 {
+    background: #1e1e1e;
+    top: 20px;
+    left: 0px;
+    width: 86px;
+  }
+  .node-1 .node-label { color: #ccff00; }
+
+  /* Node 2 — ChatGPT (center) */
+  .node-2 {
+    background: #1a2040;
+    border-color: #335AF5;
+    top: 84px;
+    left: 56px;
+    width: 90px;
+  }
+  .node-2 .node-label { color: #335AF5; }
+  .node-2 .node-port-right { border-color: #335AF5; }
+  .node-2 .node-port-left { border-color: #335AF5; }
+
+  /* Node 3 — Output */
+  .node-3 {
+    background: #1e1e1e;
+    top: 148px;
+    left: 108px;
+    width: 86px;
+  }
+  .node-3 .node-label { color: #ccff00; }
+  .node-3 .node-port-left { border-color: #2e2e33; }
+
+  /* Lime accent bar */
+  .lime-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, #ccff00 0%, #335AF5 60%, transparent 100%);
+    opacity: 0.8;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="dot-grid"></div>
+  <div class="lime-glow"></div>
+
+  <!-- Brand block -->
+  <div class="brand-block">
+    <svg class="logo-mark" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- K body -->
+      <rect width="36" height="36" rx="8" fill="#1e1e1e"/>
+      <!-- K strokes -->
+      <line x1="10" y1="9" x2="10" y2="27" stroke="#e8e8ea" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="10" y1="18" x2="24" y2="9" stroke="#e8e8ea" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="10" y1="18" x2="24" y2="27" stroke="#e8e8ea" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Signal line on upper arm (lime) -->
+      <line x1="15" y1="15" x2="23" y2="10" stroke="#ccff00" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+      <!-- Node dot (lime) -->
+      <circle cx="23" cy="10" r="2.5" fill="#ccff00"/>
+    </svg>
+
+    <div class="wordmark">Kudo<span>Flow99</span></div>
+  </div>
+
+  <!-- Tagline -->
+  <div class="tagline">Your AI. Your flow.</div>
+
+  <!-- Workflow area -->
+  <div class="workflow-area">
+    <svg class="workflow-svg" viewBox="0 0 200 220">
+      <!-- Connection lines -->
+      <!-- Node 1 right → Node 2 left -->
+      <path d="M 86 46 C 110 46, 96 110, 112 110" stroke="#ccff00" stroke-width="1.5" fill="none" opacity="0.5" stroke-dasharray="4,3"/>
+      <!-- Node 2 right → Node 3 left -->
+      <path d="M 146 110 C 168 110, 164 174, 164 174" stroke="#335AF5" stroke-width="1.5" fill="none" opacity="0.5" stroke-dasharray="4,3"/>
+    </svg>
+
+    <!-- Node 1: Prompt -->
+    <div class="node node-1">
+      <div class="node-label">Input</div>
+      <div class="node-title">Prompt</div>
+      <div class="node-port-right"></div>
+    </div>
+
+    <!-- Node 2: ChatGPT -->
+    <div class="node node-2">
+      <div class="node-label">AI Model</div>
+      <div class="node-title">ChatGPT</div>
+      <div class="node-port-left"></div>
+      <div class="node-port-right"></div>
+    </div>
+
+    <!-- Node 3: Output -->
+    <div class="node node-3">
+      <div class="node-label">Output</div>
+      <div class="node-title">Result</div>
+      <div class="node-port-left"></div>
+    </div>
+  </div>
+
+  <!-- Bottom badge -->
+  <div class="badge">kudoskill.xyz · Chrome Extension</div>
+
+  <!-- Lime accent bar -->
+  <div class="lime-bar"></div>
+</div>
+</body>
+</html>

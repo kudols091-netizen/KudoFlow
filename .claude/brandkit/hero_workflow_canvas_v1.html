@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KudoFlow — Workflow Canvas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --radius-lg: 12px; --node-bg: #181818; --node-border: #3a3a3a; }
+body { background: #111111; font-family: 'Inter', sans-serif; color: #e8e8ea; }
+
+/* ── CANVAS ── */
+.canvas-outer {
+  position: relative;
+  width: 100%; min-height: 580px; height: 100vh;
+  overflow: hidden;
+  background-image: radial-gradient(circle, #252525 1px, transparent 1px);
+  background-size: 28px 28px;
+  user-select: none;
+}
+
+/* SVG connections — below nodes */
+#svg-layer {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+@keyframes dash-flow { to { stroke-dashoffset: -24; } }
+
+/* ── NODE ── */
+.df-node {
+  position: absolute;
+  background: var(--node-bg);
+  border: 2px solid var(--node-border);
+  border-radius: var(--radius-lg);
+  overflow: visible;
+  z-index: 3;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+  cursor: grab;
+  transition: box-shadow .15s, border-color .15s;
+}
+.df-node:active { cursor: grabbing; }
+.df-node.dragging {
+  box-shadow: 0 20px 56px rgba(0,0,0,0.85);
+  border-color: #555; z-index: 10;
+}
+/* Inner clips image overflow */
+.df-node-inner {
+  border-radius: calc(var(--radius-lg) - 2px);
+  overflow: hidden;
+}
+
+/* Header */
+.df-node-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.df-node-icon {
+  width: 22px; height: 22px; display: flex; align-items: center;
+  justify-content: center; border-radius: 6px; flex-shrink: 0;
+}
+.df-node-icon.image   { background: rgba(236,72,153,0.15); color: #ec4899; }
+.df-node-icon.prompt  { background: rgba(111,139,247,0.15); color: #6f8bf7; }
+.df-node-icon.chatgpt { background: rgba(16,163,127,0.15);  color: #10A37F; }
+.df-node-icon.generate{ background: rgba(139,92,246,0.15);  color: #a78bfa; }
+.df-node-title { font-size: 12px; font-weight: 600; color: #e8e8ea; flex: 1; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.done    { background: #22c55e; }
+.status-dot.pending { background: #f59e0b; animation: pulse-dot 1.5s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Provider pill */
+.df-node-provider-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px 3px 6px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+  margin: 6px 10px 0; width: calc(100% - 20px);
+}
+.df-node-provider-pill.openai { background: rgba(16,163,127,0.1); color: #10A37F; }
+.df-node-provider-pill.flow   { background: rgba(49,134,255,0.1); color: #3186FF; }
+
+/* Body */
+.df-node-body { padding: 8px 10px 10px; }
+
+/* Preview */
+.df-node-preview {
+  width: 100%; border-radius: 8px; overflow: hidden; background: #1e1e1e;
+}
+.df-node-preview img, .df-node-preview video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.ratio-portrait { aspect-ratio: 3/4; }
+.ratio-tall     { aspect-ratio: 9/16; }
+.placeholder {
+  width: 100%; height: 100%; min-height: 60px;
+  background: linear-gradient(135deg, #1e1e1e 0%, #252525 50%, #1e1e1e 100%);
+  background-size: 200% 200%;
+  animation: shimmer 2s linear infinite;
+  display: flex; align-items: center; justify-content: center;
+  color: #333; font-size: 24px;
+}
+@keyframes shimmer { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+
+/* Tags */
+.df-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.df-tag {
+  display: inline-flex; align-items: center;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px; padding: 2px 7px;
+  font-size: 10px; font-weight: 600; color: #71717a;
+}
+
+/* Prompt text */
+.prompt-text {
+  font-size: 11px; color: #6b7280; line-height: 1.5;
+  max-height: 72px; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+}
+
+/* ── PORT HANDLES ── */
+.port {
+  position: absolute;
+  width: 22px; height: 22px;
+  background: #1c1c1c;
+  border: 1.5px solid #444;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  transform: translateY(-50%);
+  z-index: 10;
+  cursor: crosshair;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.port:hover { background: #242424; transform: translateY(-50%) scale(1.15); }
+.port.out { right: -12px; }
+.port.in  { left: -12px; }
+.port.image { border-color: rgba(236,72,153,0.55); }
+.port.image:hover { border-color: #ec4899; background: rgba(236,72,153,0.08); }
+.port.text  { border-color: rgba(111,139,247,0.55); }
+.port.text:hover  { border-color: #6f8bf7; background: rgba(111,139,247,0.08); }
+.port.video { border-color: rgba(167,139,250,0.55); }
+.port.video:hover { border-color: #a78bfa; background: rgba(167,139,250,0.08); }
+.port-T {
+  font-size: 10px; font-weight: 800;
+  font-family: 'Inter Tight', sans-serif;
+  color: #6f8bf7; line-height: 1;
+}
+
+/* ── FLOAT ANIMATIONS ── */
+@keyframes f0 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-8px)} }
+@keyframes f1 { 0%,100%{transform:translateY(-4px)} 50%{transform:translateY(6px)}  }
+@keyframes f2 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-10px)} }
+@keyframes f3 { 0%,100%{transform:translateY(-3px)} 50%{transform:translateY(7px)}  }
+@keyframes f4 { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-6px)}  }
+.n0 { animation: f0 4.6s ease-in-out infinite; }
+.n1 { animation: f1 5.3s ease-in-out infinite; }
+.n2 { animation: f2 4.9s ease-in-out infinite; }
+.n3 { animation: f3 5.7s ease-in-out infinite; }
+.n4 { animation: f4 4.3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="canvas-outer" id="canvas">
+
+  <!-- SVG layer (behind nodes) -->
+  <svg id="svg-layer">
+    <defs>
+      <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ─────────────────────────────────────────────────────
+       NODE: Reference Image
+  ───────────────────────────────────────────────────── -->
+  <div class="df-node n0" id="node-ref" style="left:60px; top:80px; width:195px;">
+    <div class="df-node-inner">
+      <div class="df-node-header">
+        <div class="df-node-icon image">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <span class="df-node-title">Reference Image</span>
+        <div class="status-dot done"></div>
+      </div>
+      <div class="df-node-body">
+        <div class="df-node-preview ratio-portrait">
+          <img src="./workflow-ref-img.jpg.png" alt="ref"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+          <div class="placeholder" style="display:none;">🖼️</div>
+        </div>
+        <div class="df-tags">
+          <span class="df-tag">1 ảnh</span>
+          <span class="df-tag" style="color:#ec4899;border-color:rgba(236,72,153,0.2);">@ref</span>
+        </div>
+      </div>
+    </div>
+    <!-- Out: image -->
+    <div class="port out image" data-port="ref-img-out" style="top:42%;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────
+       NODE: Prompt 1 (feeds ChatGPT)
+  ───────────────────────────────────────────────────── -->
+  <div class="df-node n1" id="node-prompt1" style="left:290px; top:340px; width:210px;">
+    <div class="df-node-inner">
+      <div class="df-node-header">
+        <div class="df-node-icon prompt">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        </div>
+        <span class="df-node-title">Prompt</span>
+        <div class="status-dot done"></div>
+      </div>
+      <div class="df-node-body">
+        <p class="prompt-text">Use the uploaded reference image to preserve the same character identity and style. Create a cute stylized 3D animated image of the same boy riding a futuristic hoverboard high in a beautiful dreamy sky...</p>
+        <div class="df-tags">
+          <span class="df-tag">Plain</span>
+          <span class="df-tag">812/20000</span>
+        </div>
+      </div>
+    </div>
+    <!-- Out: text -->
+    <div class="port out text" data-port="prompt1-text-out" style="top:40%;">
+      <span class="port-T">T</span>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────
+       NODE: ChatGPT
+  ───────────────────────────────────────────────────── -->
+  <div class="df-node n2" id="node-chatgpt" style="left:540px; top:60px; width:255px;">
+    <div class="df-node-inner">
+      <div class="df-node-header">
+        <div class="df-node-icon chatgpt">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"/></svg>
+        </div>
+        <span class="df-node-title">ChatGPT</span>
+        <div class="status-dot done"></div>
+      </div>
+      <div class="df-node-provider-pill openai">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"/></svg>
+        ChatGPT
+      </div>
+      <div class="df-node-body" style="margin-top:4px;">
+        <div class="df-node-preview ratio-portrait">
+          <img src="./workflow-chatgpt-result.jpeg.png" alt="chatgpt result"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+          <div class="placeholder" style="display:none;">✨</div>
+        </div>
+        <div class="df-tags">
+          <span class="df-tag">9:16</span>
+          <span class="df-tag" style="color:#10A37F;border-color:rgba(16,163,127,0.25);">gpt-4o</span>
+        </div>
+      </div>
+    </div>
+    <!-- In: image -->
+    <div class="port in image" data-port="chatgpt-img-in" style="top:28%;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+    <!-- In: text -->
+    <div class="port in text" data-port="chatgpt-text-in" style="top:56%;">
+      <span class="port-T">T</span>
+    </div>
+    <!-- Out: image -->
+    <div class="port out image" data-port="chatgpt-img-out" style="top:40%;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────
+       NODE: Prompt 2 (feeds Flow Video)
+  ───────────────────────────────────────────────────── -->
+  <div class="df-node n3" id="node-prompt2" style="left:840px; top:340px; width:210px;">
+    <div class="df-node-inner">
+      <div class="df-node-header">
+        <div class="df-node-icon prompt">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        </div>
+        <span class="df-node-title">Prompt</span>
+        <div class="status-dot done"></div>
+      </div>
+      <div class="df-node-body">
+        <p class="prompt-text">Animate the uploaded image into an 8-second video. The cute chibi boy gently glides on the glowing hoverboard above pastel clouds, arms out for balance, blue thrusters pulse gently, stars sparkle...</p>
+        <div class="df-tags">
+          <span class="df-tag">Plain</span>
+          <span class="df-tag">543/20000</span>
+        </div>
+      </div>
+    </div>
+    <!-- Out: text -->
+    <div class="port out text" data-port="prompt2-text-out" style="top:40%;">
+      <span class="port-T">T</span>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────
+       NODE: Flow — Video
+  ───────────────────────────────────────────────────── -->
+  <div class="df-node n4" id="node-flow" style="left:1090px; top:60px; width:240px;">
+    <div class="df-node-inner">
+      <div class="df-node-header">
+        <div class="df-node-icon generate">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+        </div>
+        <span class="df-node-title">Flow — Video</span>
+        <div class="status-dot pending"></div>
+      </div>
+      <div class="df-node-provider-pill flow">
+        <svg width="13" height="13" viewBox="0 0 24 24"><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="#3186FF"/></svg>
+        Google Flow
+      </div>
+      <div class="df-node-body" style="margin-top:4px;">
+        <div class="df-node-preview ratio-tall">
+          <video src="./workflow-flow-video-result.mp4.mp4" autoplay loop muted playsinline
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"></video>
+          <div class="placeholder" style="display:none;">🎬</div>
+        </div>
+        <div class="df-tags">
+          <span class="df-tag">8s</span>
+          <span class="df-tag">9:16</span>
+          <span class="df-tag" style="color:#a78bfa;border-color:rgba(167,139,250,0.25);">Video</span>
+        </div>
+      </div>
+    </div>
+    <!-- In: image -->
+    <div class="port in image" data-port="flow-img-in" style="top:22%;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+    <!-- In: text -->
+    <div class="port in text" data-port="flow-text-in" style="top:42%;">
+      <span class="port-T">T</span>
+    </div>
+    <!-- Out: video -->
+    <div class="port out video" data-port="flow-vid-out" style="top:32%;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+    </div>
+  </div>
+
+</div><!-- /canvas-outer -->
+
+<script>
+// ── Connection definitions ──
+const CONNECTIONS = [
+  { from: 'ref-img-out',      to: 'chatgpt-img-in',  color: '#ec4899' },
+  { from: 'prompt1-text-out', to: 'chatgpt-text-in', color: '#6f8bf7' },
+  { from: 'chatgpt-img-out',  to: 'flow-img-in',     color: '#ccff00' },
+  { from: 'prompt2-text-out', to: 'flow-text-in',    color: '#6f8bf7' },
+];
+
+const svg    = document.getElementById('svg-layer');
+const canvas = document.getElementById('canvas');
+
+function portCenter(portEl) {
+  const pr = portEl.getBoundingClientRect();
+  const cr = canvas.getBoundingClientRect();
+  return { x: pr.left + pr.width/2 - cr.left, y: pr.top + pr.height/2 - cr.top };
+}
+
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function makePath(d, stroke, width, dash, filter, delay) {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', d); p.setAttribute('fill', 'none');
+  p.setAttribute('stroke', stroke); p.setAttribute('stroke-width', width);
+  if (dash)   p.setAttribute('stroke-dasharray', dash);
+  if (filter) p.style.filter = filter;
+  if (delay != null) p.style.animation = `dash-flow 1.4s linear infinite ${delay}s`;
+  p.classList.add('edge');
+  return p;
+}
+
+function drawConnections() {
+  svg.querySelectorAll('.edge').forEach(e => e.remove());
+
+  CONNECTIONS.forEach(({ from, to, color }, i) => {
+    const fp = document.querySelector(`[data-port="${from}"]`);
+    const tp = document.querySelector(`[data-port="${to}"]`);
+    if (!fp || !tp) return;
+
+    const p1 = portCenter(fp);
+    const p2 = portCenter(tp);
+    const dx = Math.max(Math.abs(p2.x - p1.x) * 0.55, 80);
+    const d  = `M${p1.x},${p1.y} C${p1.x+dx},${p1.y} ${p2.x-dx},${p2.y} ${p2.x},${p2.y}`;
+
+    svg.appendChild(makePath(d, hexAlpha(color, 0.10), 3.5));
+    svg.appendChild(makePath(d, color, 1.8, '7 5', 'url(#glow)', i * 0.28));
+  });
+}
+
+// ── Drag ──
+let dragging = null, ox = 0, oy = 0;
+
+document.querySelectorAll('.df-node').forEach(node => {
+  node.addEventListener('mousedown', e => {
+    if (e.target.closest('.port')) return;
+    dragging = node;
+    const nr = node.getBoundingClientRect();
+    const cr = canvas.getBoundingClientRect();
+    ox = e.clientX - (nr.left - cr.left);
+    oy = e.clientY - (nr.top  - cr.top);
+    node.classList.add('dragging');
+    node.style.animationPlayState = 'paused';
+    e.preventDefault();
+  });
+});
+
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const cr = canvas.getBoundingClientRect();
+  dragging.style.left = (e.clientX - cr.left - ox) + 'px';
+  dragging.style.top  = (e.clientY - cr.top  - oy) + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (!dragging) return;
+  dragging.classList.remove('dragging');
+  dragging.style.animationPlayState = '';
+  dragging = null;
+});
+
+// ── Render loop (tracks float animations via getBoundingClientRect) ──
+function loop() {
+  drawConnections();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

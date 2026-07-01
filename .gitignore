@@ -1,23 +1,19 @@
-# Environment & secrets
-server/.env
-server/.env.*
-*.env
+﻿# Old version archives
+KudoFlow99_v1.1.15.zip
+KudoFlow99_v1.1.15/
 
-# Node modules
+# Extension copy/zip (main code is in extension/)
+KudoFlow_extension_latest.zip
+KudoFlow_extension_latest/
+
+# node_modules
 node_modules/
-server/node_modules/
+promo-images/node_modules/
 
-# Logs
-*.log
-npm-debug.log*
+# Claude Code local settings (may contain secrets)
+.claude/settings.local.json
+.claude/worktrees/
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Editor
-.vscode/
-*.swp
-
-# Claude Code local settings
-.claude/settings.local.json

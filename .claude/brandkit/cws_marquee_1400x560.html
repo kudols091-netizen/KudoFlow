@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400">
+<title>CWS Marquee 1400×560</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1400px;
+    height: 560px;
+    overflow: hidden;
+    background: #111111;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .canvas {
+    width: 1400px;
+    height: 560px;
+    background: #111111;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  .left-panel {
+    width: 560px;
+    height: 560px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px 56px 56px 64px;
+    flex-shrink: 0;
+  }
+
+  /* Lime radial glow behind logo */
+  .lime-glow {
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(204,255,0,0.15) 0%, transparent 65%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  /* K-node logo mark */
+  .logo-mark {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 28px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Wordmark */
+  .wordmark {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 900;
+    font-size: 58px;
+    letter-spacing: -2px;
+    color: #e8e8ea;
+    line-height: 1;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .wordmark span { color: #ccff00; }
+
+  /* Tagline */
+  .tagline {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #71717a;
+    letter-spacing: -0.3px;
+    margin-bottom: 36px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Feature pills */
+  .pills {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #71717a;
+    letter-spacing: 0.02em;
+  }
+  .pill::before {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #ccff00;
+    flex-shrink: 0;
+  }
+
+  /* Domain */
+  .domain {
+    position: absolute;
+    bottom: 32px;
+    left: 64px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: #2e2e33;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    z-index: 1;
+  }
+
+  /* Divider */
+  .divider {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent 0%, #2e2e33 30%, #2e2e33 70%, transparent 100%);
+    flex-shrink: 0;
+  }
+
+  /* ─── RIGHT PANEL ─── */
+  .right-panel {
+    flex: 1;
+    height: 560px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Dot grid */
+  .dot-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, #2e2e33 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.6;
+  }
+
+  /* Right panel edge fade */
+  .right-fade-left {
+    position: absolute;
+    top: 0; left: 0; width: 60px; height: 100%;
+    background: linear-gradient(90deg, #111111, transparent);
+    z-index: 10;
+  }
+  .right-fade-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 60px;
+    background: linear-gradient(180deg, transparent, #111111);
+    z-index: 10;
+  }
+
+  /* Blue glow behind node cluster */
+  .blue-glow {
+    position: absolute;
+    width: 500px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(51,90,245,0.12) 0%, transparent 65%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Workflow canvas container */
+  .workflow-canvas {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Node cards */
+  .node {
+    position: absolute;
+    border-radius: 10px;
+    padding: 12px 16px;
+    border: 1px solid #2e2e33;
+    min-width: 130px;
+  }
+
+  .node-type {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .node-name {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #e8e8ea;
+    letter-spacing: -0.3px;
+  }
+
+  .node-meta {
+    font-size: 10px;
+    color: #71717a;
+    margin-top: 4px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Ports */
+  .port-r {
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #111111;
+  }
+  .port-l {
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #111111;
+  }
+
+  /* Node styles */
+  .n-prompt {
+    background: #1e1e1e;
+    top: 100px; left: 80px;
+    border-color: #ccff00;
+  }
+  .n-prompt .node-type { color: #ccff00; }
+  .n-prompt .port-r { border-color: #ccff00; }
+
+  .n-chatgpt {
+    background: #141b35;
+    border-color: #335AF5;
+    top: 80px; left: 270px;
+  }
+  .n-chatgpt .node-type { color: #335AF5; }
+  .n-chatgpt .port-r { border-color: #335AF5; }
+  .n-chatgpt .port-l { border-color: #335AF5; }
+
+  .n-grok {
+    background: #1e1520;
+    border-color: #9b59f5;
+    top: 240px; left: 270px;
+  }
+  .n-grok .node-type { color: #9b59f5; }
+  .n-grok .port-r { border-color: #9b59f5; }
+  .n-grok .port-l { border-color: #9b59f5; }
+
+  .n-output {
+    background: #1e1e1e;
+    border-color: #2e2e33;
+    top: 160px; left: 470px;
+  }
+  .n-output .node-type { color: #ccff00; }
+  .n-output .port-l { border-color: #2e2e33; }
+
+  /* Result chips */
+  .result-chips {
+    position: absolute;
+    top: 168px; left: 470px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 62px;
+    left: 478px;
+  }
+  .chip {
+    font-size: 9px;
+    font-family: 'Inter', sans-serif;
+    color: #e8e8ea;
+    background: #2e2e33;
+    border-radius: 4px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .chip.lime { color: #ccff00; background: rgba(204,255,0,0.08); }
+
+  /* Run badge */
+  .run-badge {
+    position: absolute;
+    bottom: 80px;
+    right: 60px;
+    background: #ccff00;
+    color: #111111;
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 8px 18px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    z-index: 20;
+  }
+
+  /* Bottom lime bar */
+  .lime-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, #ccff00 0%, #335AF5 50%, transparent 100%);
+    opacity: 0.8;
+    z-index: 30;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="lime-glow"></div>
+
+    <!-- K-node logo -->
+    <svg class="logo-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#1e1e1e"/>
+      <!-- K strokes -->
+      <line x1="18" y1="14" x2="18" y2="50" stroke="#e8e8ea" stroke-width="4" stroke-linecap="round"/>
+      <line x1="18" y1="32" x2="44" y2="14" stroke="#e8e8ea" stroke-width="4" stroke-linecap="round"/>
+      <line x1="18" y1="32" x2="44" y2="50" stroke="#e8e8ea" stroke-width="4" stroke-linecap="round"/>
+      <!-- Signal line upper arm (lime) -->
+      <line x1="27" y1="25.5" x2="43" y2="15" stroke="#ccff00" stroke-width="3" stroke-linecap="round"/>
+      <!-- Node dot -->
+      <circle cx="43" cy="15" r="4.5" fill="#ccff00"/>
+    </svg>
+
+    <div class="wordmark">Kudo<span>Flow99</span></div>
+    <div class="tagline">Your AI. Your flow.</div>
+
+    <div class="pills">
+      <div class="pill">Drag-and-drop AI workflow builder</div>
+      <div class="pill">Connect ChatGPT, Grok & Gemini</div>
+      <div class="pill">Auto-download 2K/4K results</div>
+      <div class="pill">No code needed</div>
+    </div>
+
+    <div class="domain">kudoskill.xyz</div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="dot-grid"></div>
+    <div class="blue-glow"></div>
+    <div class="right-fade-left"></div>
+    <div class="right-fade-bottom"></div>
+
+    <div class="workflow-canvas">
+
+      <!-- SVG connections -->
+      <svg style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;" viewBox="0 0 840 560">
+        <!-- Prompt → ChatGPT -->
+        <path d="M 210 196 C 240 196, 248 176, 270 176" stroke="#ccff00" stroke-width="2" fill="none" opacity="0.6" stroke-dasharray="5,4"/>
+        <!-- Prompt → Grok -->
+        <path d="M 210 196 C 240 196, 248 336, 270 336" stroke="#ccff00" stroke-width="2" fill="none" opacity="0.4" stroke-dasharray="5,4"/>
+        <!-- ChatGPT → Output -->
+        <path d="M 400 176 C 430 176, 448 256, 470 256" stroke="#335AF5" stroke-width="2" fill="none" opacity="0.6" stroke-dasharray="5,4"/>
+        <!-- Grok → Output -->
+        <path d="M 400 336 C 430 336, 448 276, 470 256" stroke="#9b59f5" stroke-width="2" fill="none" opacity="0.5" stroke-dasharray="5,4"/>
+      </svg>
+
+      <!-- Node: Prompt -->
+      <div class="node n-prompt">
+        <div class="node-type">Input</div>
+        <div class="node-name">Prompt</div>
+        <div class="node-meta">Batch · 12 prompts</div>
+        <div class="port-r" style="border-color:#ccff00;"></div>
+      </div>
+
+      <!-- Node: ChatGPT -->
+      <div class="node n-chatgpt">
+        <div class="node-type">AI Model</div>
+        <div class="node-name">ChatGPT</div>
+        <div class="node-meta">gpt-4o · Running</div>
+        <div class="port-l" style="border-color:#335AF5;"></div>
+        <div class="port-r" style="border-color:#335AF5;"></div>
+      </div>
+
+      <!-- Node: Grok -->
+      <div class="node n-grok">
+        <div class="node-type">AI Model</div>
+        <div class="node-name">Grok</div>
+        <div class="node-meta">grok-3 · Ready</div>
+        <div class="port-l" style="border-color:#9b59f5;"></div>
+        <div class="port-r" style="border-color:#9b59f5;"></div>
+      </div>
+
+      <!-- Node: Output -->
+      <div class="node n-output">
+        <div class="node-type">Output</div>
+        <div class="node-name">Result</div>
+        <div class="node-meta">Auto-download · 4K</div>
+        <div class="port-l" style="border-color:#2e2e33;"></div>
+      </div>
+
+    </div>
+
+    <!-- Run badge -->
+    <div class="run-badge">▶ Run Flow</div>
+  </div>
+
+  <!-- Bottom lime bar -->
+  <div class="lime-bar"></div>
+</div>
+</body>
+</html>

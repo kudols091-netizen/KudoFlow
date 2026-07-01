@@ -49,4 +49,48 @@ module.exports = async function usageRoutes(fastify) {
   fastify.post('/usage/events', { preHandler: optionalAuth }, async (req) => {
     return { success: true };
   });
+
+  // GET /usage/summary — dashboard stats
+  fastify.get('/usage/summary', { preHandler: authenticate }, async (req) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayUsage = await queryOne(
+      'SELECT * FROM usage_daily WHERE user_id = ? AND date = ?',
+      [req.user.id, today]
+    );
+    const allTime = await queryOne(
+      `SELECT SUM(chatgpt_prompt_total) as chatgpt, SUM(gemini_prompt_total) as gemini,
+              SUM(grok_prompt_total) as grok, SUM(workflow_run) as workflows,
+              SUM(task_run) as tasks
+       FROM usage_daily WHERE user_id = ?`,
+      [req.user.id]
+    );
+    const PLAN_LIMITS = {
+      free:  { prompts_per_batch: 10,  history: 50,  workflows: 5 },
+      pro:   { prompts_per_batch: 100, history: 500, workflows: 999 },
+      ultra: { prompts_per_batch: 500, history: 2000, workflows: 999 },
+    };
+    const plan = req.user.plan || 'free';
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+    return {
+      success: true,
+      data: {
+        today: {
+          chatgpt: todayUsage?.chatgpt_prompt_total || 0,
+          gemini:  todayUsage?.gemini_prompt_total  || 0,
+          grok:    todayUsage?.grok_prompt_total    || 0,
+          workflows: todayUsage?.workflow_run       || 0,
+          tasks:   todayUsage?.task_run             || 0,
+        },
+        all_time: {
+          chatgpt:   parseInt(allTime?.chatgpt   || 0),
+          gemini:    parseInt(allTime?.gemini    || 0),
+          grok:      parseInt(allTime?.grok      || 0),
+          workflows: parseInt(allTime?.workflows || 0),
+          tasks:     parseInt(allTime?.tasks     || 0),
+        },
+        limits,
+        plan,
+      }
+    };
+  });
 };

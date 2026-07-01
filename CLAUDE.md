@@ -83,6 +83,22 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - **Ưu tiên làm ngay** thay vì hỏi clarification — nếu có nhiều cách hiểu, chọn cách hợp lý nhất rồi làm, sau đó brief kết quả.
 - **Sau mỗi thay đổi**, đưa ra ngắn gọn: cái gì đã làm, có điểm nào cần chú ý / cần review không.
 
+## 8. Brandkit-First Workflow
+
+**Trước khi làm bất kỳ chức năng UI mới nào, phải tạo brandkit để duyệt.**
+
+Quy trình bắt buộc:
+1. Khi có yêu cầu tạo chức năng mới có UI — dừng lại, **không code ngay**.
+2. Dùng skill `brandkit` để tạo brandkit preview cho chức năng đó.
+3. Lưu file vào `.claude/brandkit/[feature_name]_v[N].html`.
+4. Đưa cho người dùng xem và chờ xác nhận ("duyệt" hoặc "ok").
+5. Chỉ sau khi được duyệt mới bắt đầu implement code thực.
+
+Áp dụng cho: modal mới, trang mới, component UI mới, redesign bất kỳ phần nào.
+Không áp dụng cho: bugfix, refactor logic, thay đổi không ảnh hưởng visual.
+
+Brandkit reference: `.claude/brandkit/kudotoolai_brandkit_v1.html` — design system chuẩn của project.
+
 ## 7. Project Structure
 
 ```
