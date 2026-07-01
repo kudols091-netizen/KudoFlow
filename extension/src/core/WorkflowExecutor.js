@@ -7085,7 +7085,8 @@
       console.log(`[PromptNode] START: nodeId=${node.node_id}, use_ai=${useAi}, provider=${node.provider}, hasFeatureGate=${!!window.featureGate}`);
 
       // 1. Feature gate cơ bản — cho phép dùng Prompt node nói chung (cả OFF + ON).
-      if (window.featureGate && !window.featureGate.canUse('prompt_node_enabled')) {
+      const _isLoggedIn = !!(window.authManager?.isLoggedIn?.());
+      if (window.featureGate && !_isLoggedIn && !window.featureGate.canUse('prompt_node_enabled')) {
         console.warn(`[PromptNode] FEATURE_LOCKED: prompt_node_enabled = false`);
         const err = new Error('Prompt node chưa được kích hoạt cho gói hiện tại');
         err.code = 'FEATURE_LOCKED';
@@ -7236,7 +7237,7 @@
 
       // 3. BRANCH 2: AI Agent ON
       // 3.1. Feature gate AI — fallback to plain nếu không có quyền (không throw).
-      if (window.featureGate && !window.featureGate.canUse(_aiFeatureKey)) {
+      if (window.featureGate && !_isLoggedIn && !window.featureGate.canUse(_aiFeatureKey)) {
         console.warn(`[PromptNode] ${_aiFeatureKey} = false → fallback plain. Plan: ${window.featureGate?._currentPlan || 'unknown'}`);
         emitLog(`${_aiFeatureKey} = false → fallback sang plain text`, 'warn');
         // 2026-05-31: normalize plain_fallback text
@@ -7290,7 +7291,7 @@
       const _allowedProviders = new Set(['chatgpt', 'gemini', 'grok']);
       const action = _allowedProviders.has(providerKey) ? `${providerKey}_run` : 'chatgpt_run';
       let token = null;
-      if (window.ExecutionGate) {
+      if (window.ExecutionGate && !_isLoggedIn) {
         try {
           const gate = await window.ExecutionGate.request(action, 1, {
             owner: 'workflow',

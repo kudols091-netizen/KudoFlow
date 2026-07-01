@@ -241,12 +241,22 @@
 
   function _queryAllWithFallback(key, defaultSelectors = null) {
     const config = _getDynamicSelector(key);
-    const hardcoded = defaultSelectors || []; // Phase 6 Bug P: _FALLBACK_SELECTORS removed
-    const selectors = config?.selectors?.length > 0 ? config.selectors : hardcoded;
+    const hardcoded = defaultSelectors || [];
 
-    for (let i = 0; i < selectors.length; i++) {
+    // Try server config selectors first
+    if (config?.selectors?.length > 0) {
+      for (let i = 0; i < config.selectors.length; i++) {
+        try {
+          const els = document.querySelectorAll(config.selectors[i]);
+          if (els.length > 0) return els;
+        } catch (e) { /* invalid selector */ }
+      }
+    }
+
+    // Server config found nothing → try hardcoded fallback
+    for (let i = 0; i < hardcoded.length; i++) {
       try {
-        const els = document.querySelectorAll(selectors[i]);
+        const els = document.querySelectorAll(hardcoded[i]);
         if (els.length > 0) return els;
       } catch (e) { /* invalid selector */ }
     }
@@ -657,6 +667,25 @@
     }
 
     if (!sendBtn) {
+      // Fallback: tìm theo aria-label (Gemini UI mới dùng aria-label="Send message")
+      const ariaBtn = document.querySelector(
+        'button[aria-label*="Send"], button[aria-label*="send"], button[aria-label*="Gửi"]'
+      );
+      if (ariaBtn && !ariaBtn.disabled) {
+        sendBtn = ariaBtn;
+        console.log('[ChatAI] Gemini: Tìm thấy nút gửi qua aria-label');
+      }
+    }
+
+    if (!sendBtn) {
+      // Fallback cuối: dispatch Enter key vào editor để submit
+      console.warn('[ChatAI] Không tìm thấy nút gửi — thử Enter key');
+      const editor = document.querySelector('[contenteditable="true"], textarea');
+      if (editor) {
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+        await sleep(300);
+        return true;
+      }
       console.error('[ChatAI] Không tìm thấy nút gửi trên Gemini');
       return false;
     }
@@ -676,9 +705,16 @@
 
   // ============ CG-8: Snapshot Gemini conversation state ============
   // Gemini DOM dùng <user-query> + <model-response> elements để phân tách turns.
+  const _GEMINI_RESPONSE_SELECTORS = [
+    'model-response',
+    'ms-chat-turn',
+    '.response-container-content',
+    '[data-response-id]',
+    '.model-response-text',
+  ];
+
   function snapshotGeminiState() {
-    // Dùng dynamic selector cho response container
-    const responses = _queryAllWithFallback('response_container');
+    const responses = _queryAllWithFallback('response_container', _GEMINI_RESPONSE_SELECTORS);
     return {
       turnCount: responses.length,
       lastIds: Array.from(responses)
@@ -787,8 +823,7 @@
     const STABLE_THRESHOLD = 8; // Text phải stable qua 8 poll cycles (~4s) mới coi là xong
 
     while (Date.now() - startTime < timeout) {
-      // Dùng dynamic selector cho response container
-      const responses = _queryAllWithFallback('response_container');
+      const responses = _queryAllWithFallback('response_container', _GEMINI_RESPONSE_SELECTORS);
 
       // Chưa có response mới so với baseline → poll tiếp
       if (responses.length <= baseline.turnCount) {

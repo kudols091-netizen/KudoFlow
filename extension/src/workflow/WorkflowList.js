@@ -45,8 +45,8 @@ class WorkflowList {
     // loadWorkflows() dùng cache làm fallback thay vì trả về empty.
     await this._loadFromCache();
 
-    await Promise.race([this.loadWorkflows(), new Promise(r => setTimeout(r, 10000))]);
-    await Promise.race([this.loadSharedWorkflows(), new Promise(r => setTimeout(r, 10000))]);
+    await this.loadWorkflows();
+    await this.loadSharedWorkflows();
     this.bindGlobalEvents();
     this._bindToolbarEvents();
     // [Audit Bug 7 fix 2026-06-22] Replay execution events queued by background while sidepanel closed.

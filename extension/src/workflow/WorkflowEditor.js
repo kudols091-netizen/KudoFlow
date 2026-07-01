@@ -427,13 +427,17 @@ class WorkflowEditor {
       // Store handler references for cleanup in _forceClose()
       this._ebHandlers = {};
       // Phase enhancement: Click select node KHÔNG auto-mở form (chỉ select highlight).
-      // User click gear icon trong hover toolbar → mới mở form qua 'node:open_settings' event.
+      // Inspector Panel: click node → auto-open config panel (gear icon vẫn hoạt động như cũ).
       this._ebHandlers['node:selected'] = (data) => {
         this.selectedNodeId = data.nodeId;
         // UI 2026-05-27: highlight connection của node đang select (đổi màu bright theo type).
         try { this._setNodeConnectionsSelected(data.nodeId); } catch (e) {}
         // Reset form dirty flag (đảm bảo state clean)
         try { this._missingRefWarned = false; } catch (e) {}
+        // Chỉ mở panel khi chưa đang hiển thị node này (tránh re-render không cần thiết)
+        if (this._formNodeId !== data.nodeId) {
+          this._handleNodeSelected(data.nodeId);
+        }
       };
       this._ebHandlers['node:open_settings'] = (data) => this._handleNodeSelected(data.nodeId);
       this._ebHandlers['node:unselected'] = () => this._handleNodeUnselected();
@@ -1076,10 +1080,10 @@ class WorkflowEditor {
     }
 
     if (type === 'prompt') {
-      // AI Agent rename (2026-05-30): canUseAiAgent() check key 'ai_agent_enabled' duy nhất.
-      const canEnhance = !!(window.featureGate?.canUseAiAgent?.());
-      const canChatGPT = !!(window.featureGate?.canUse?.('chatgpt_enabled'));
-      const canGemini = !!(window.featureGate?.canUse?.('gemini_enabled'));
+      // AI Agent unlock cho logged-in users (LIFETIME plan).
+      const canEnhance = !!(window.authManager?.isLoggedIn?.()) || !!(window.featureGate?.canUseAiAgent?.());
+      const canChatGPT = !!(window.authManager?.isLoggedIn?.()) || !!(window.featureGate?.canUse?.('chatgpt_enabled'));
+      const canGemini = !!(window.authManager?.isLoggedIn?.()) || !!(window.featureGate?.canUse?.('gemini_enabled'));
 
       // Toggle use_ai checkbox + label crown
       const enhanceCb = formPanel.querySelector('#promptNodeUseAi');
@@ -5521,10 +5525,10 @@ Format CHÍNH XÁC:
       const enhance = !!data.use_ai;   // var name `enhance` giữ vì template HTML below dùng nhiều
       const provider = data.provider || 'chatgpt';
       const timeoutSec = data.timeout_sec || 60;
-      // Feature gates — canUseAiAgent() check key 'ai_agent_enabled' duy nhất.
-      const canEnhance = !!(window.featureGate?.canUseAiAgent?.());
-      const canChatGPT = !!(window.featureGate?.canUse('chatgpt_enabled'));
-      const canGemini = !!(window.featureGate?.canUse('gemini_enabled'));
+      // Feature gates — unlock AI Agent cho logged-in users (LIFETIME plan).
+      const canEnhance = !!(window.authManager?.isLoggedIn?.()) || !!(window.featureGate?.canUseAiAgent?.());
+      const canChatGPT = !!(window.authManager?.isLoggedIn?.()) || !!(window.featureGate?.canUse('chatgpt_enabled'));
+      const canGemini = !!(window.authManager?.isLoggedIn?.()) || !!(window.featureGate?.canUse('gemini_enabled'));
       // Provider names from ProviderMeta
       const chatgptName = window.ProviderMeta?.getName?.('chatgpt') || 'ChatGPT';
       const geminiName = window.ProviderMeta?.getName?.('gemini') || 'Gemini';
@@ -17720,6 +17724,16 @@ QUY TẮC:
         // Fit to screen — không modify workflow → cho phép cả ở read-only
         e.preventDefault();
         this.diagramCanvas?.fitToScreen?.();
+      }
+      // Enter (không Ctrl) → run single node khi Inspector Panel đang mở
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !readOnly) {
+        const panel = this.overlay?.querySelector('#nodeFormPanel');
+        const panelVisible = panel && !panel.classList.contains('hidden');
+        if (panelVisible && this.selectedNodeId) {
+          e.preventDefault();
+          this._runSingleNode(this.selectedNodeId);
+          return;
+        }
       }
       if (e.ctrlKey && e.key === 'Enter' && !readOnly) {
         e.preventDefault();

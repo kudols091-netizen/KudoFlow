@@ -108,11 +108,7 @@ class WorkflowTab {
     // This avoids a separate _checkUserHasWorkflows() API call and race conditions where
     // the check returns empty before the first load finishes.
     try {
-      // Timeout 8s — nếu loadWorkflows/API hang thì vẫn tiếp tục init, không chờ mãi
-      await Promise.race([
-        this.workflowList._initPromise,
-        new Promise(resolve => setTimeout(resolve, 8000)),
-      ]);
+      await this.workflowList._initPromise;
       if (this.workflowList.workflows.length > 0) {
         console.log('[WorkflowTab] User has workflows, auto-switching to workflows subtab');
         this._switchSubtab('workflows');
