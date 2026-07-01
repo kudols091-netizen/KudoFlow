@@ -100,9 +100,15 @@ module.exports = async function configRoutes(fastify) {
       // ChatGPT
       chatgpt_enabled:       bool(true),
       chatgpt_run_max:       quota(-1),
+      // Gemini
+      gemini_enabled:        bool(true),
+      gemini_run_max:        quota(-1),
       // Grok
       grok_enabled:          bool(true),
       grok_run_max:          quota(-1),
+      // Prompt / AI Agent node
+      prompt_node_enabled:   bool(true),
+      ai_agent_enabled:      bool(true),
       // Tasks
       tasks_enabled:         bool(true),
       tasks_max:             quota(-1),
@@ -140,8 +146,12 @@ module.exports = async function configRoutes(fastify) {
       gen_run_max:           quota(-1),
       chatgpt_enabled:       bool(true),
       chatgpt_run_max:       quota(50),
+      gemini_enabled:        bool(true),
+      gemini_run_max:        quota(50),
       grok_enabled:          bool(true),
       grok_run_max:          quota(50),
+      prompt_node_enabled:   bool(true),
+      ai_agent_enabled:      bool(true),
       tasks_enabled:         bool(true),
       tasks_max:             quota(10),
       tasks_run_max:         quota(5),
@@ -176,8 +186,12 @@ module.exports = async function configRoutes(fastify) {
       gen_run_max:           quota(-1),
       chatgpt_enabled:       bool(false),
       chatgpt_run_max:       quota(0),
+      gemini_enabled:        bool(false),
+      gemini_run_max:        quota(0),
       grok_enabled:          bool(false),
       grok_run_max:          quota(0),
+      prompt_node_enabled:   bool(false),
+      ai_agent_enabled:      bool(false),
       tasks_enabled:         bool(false),
       tasks_max:             quota(2),
       tasks_run_max:         quota(1),
