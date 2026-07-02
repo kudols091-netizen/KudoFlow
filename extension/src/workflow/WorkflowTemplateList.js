@@ -203,14 +203,15 @@ const LOCAL_BUILT_IN_TEMPLATES = [
         pos_x: 380, pos_y: 200,
         enabled: true,
       },
-      // --- Generate collage ---
+      // --- Generate collage (text-only, no image ref — ảnh sản phẩm thường có model nên
+      //     KHÔNG dùng làm ref cho collage, tránh AI generate theo model/background đó) ---
       {
         node_id: 'local_fpp_n3',
         node_type: 'generate',
         node_name: 'Product Collage',
-        prompt: 'Fashion product lookbook 2x2 grid collage — @collage_prompt — top-left: extreme macro close-up fabric weave texture, top-right: full garment flat lay overhead view, bottom-left: close-up of collar/buttons/stitching detail, bottom-right: garment on white wooden hanger. Soft diffused studio lighting, clean white background throughout, high-end editorial photography, no people, no text, no watermarks.',
+        prompt: 'Commercial fashion product photography contact sheet. @collage_prompt. 4 panels in 2x2 grid layout separated by thin white borders: [TOP-LEFT] extreme macro close-up of fabric weave and surface texture, [TOP-RIGHT] complete garment flat lay on white surface directly from above, [BOTTOM-LEFT] close-up of collar or buttons or decorative stitching detail, [BOTTOM-RIGHT] garment displayed on a minimalist white wooden hanger. Pure white seamless studio background for all panels, soft diffused box lighting, no models, no people, no body parts, no outdoor scenes, no lifestyle backgrounds. High-end commercial product photography.',
         prompt_mode: 'mention',
-        ref_mode: 'all',
+        ref_mode: 'none',
         media_type: 'Image',
         ratio: '1:1',
         quantity: 1,
@@ -260,16 +261,14 @@ const LOCAL_BUILT_IN_TEMPLATES = [
       },
     ],
     edges: [
-      // Product Image → AI Prompt
+      // Product Image → AI Prompt (để AI phân tích sản phẩm)
       { edge_id: 'local_fpp_e1', source_node_id: 'local_fpp_n1', target_node_id: 'local_fpp_n2', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
-      // AI Prompt → Generate collage (text)
+      // AI Prompt → Generate collage (text-only, KHÔNG có image ref)
       { edge_id: 'local_fpp_e2', source_node_id: 'local_fpp_n2', target_node_id: 'local_fpp_n3', source_handle: 'output_1', target_handle: 'input_2', source_port: 'text', target_port: 'text', data_type: 'text' },
-      // Product Image → Generate collage (ref)
-      { edge_id: 'local_fpp_e3', source_node_id: 'local_fpp_n1', target_node_id: 'local_fpp_n3', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
-      // Collage → Model generate (ref — dùng làm style ref)
-      { edge_id: 'local_fpp_e4', source_node_id: 'local_fpp_n3', target_node_id: 'local_fpp_n6', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
-      // Avatar → Model generate (ref)
+      // Avatar → Model generate
       { edge_id: 'local_fpp_e5', source_node_id: 'local_fpp_n4', target_node_id: 'local_fpp_n6', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
+      // Product Image → Model generate (ref cho biết sản phẩm cụ thể)
+      { edge_id: 'local_fpp_e9', source_node_id: 'local_fpp_n1', target_node_id: 'local_fpp_n6', source_handle: 'output_1', target_handle: 'input_1', source_port: 'media', target_port: 'image_ref', data_type: 'image' },
       // Model Prompt text → Model generate
       { edge_id: 'local_fpp_e6', source_node_id: 'local_fpp_n5', target_node_id: 'local_fpp_n6', source_handle: 'output_1', target_handle: 'input_2', source_port: 'text', target_port: 'text', data_type: 'text' },
       // Collage → Download
