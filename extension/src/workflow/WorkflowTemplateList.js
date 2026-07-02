@@ -195,7 +195,7 @@ const LOCAL_BUILT_IN_TEMPLATES = [
         node_name: 'AI Collage Prompt',
         slug: 'collage_prompt',
         slug_auto: false,
-        prompt: 'Phân tích ảnh sản phẩm thời trang này, sau đó viết 1 prompt tiếng Anh để tạo ảnh LOOKBOOK COLLAGE — 4 góc nhìn của sản phẩm bố trí trong 1 ảnh duy nhất dạng 2x2 grid:\n- Top-left: extreme close-up macro kết cấu vải, sợi dệt, texture bề mặt\n- Top-right: flat lay toàn sản phẩm nhìn từ trên, symmetrically arranged\n- Bottom-left: close-up chi tiết đặc biệt (cổ, khuy, đường may, họa tiết nổi bật)\n- Bottom-right: fashion display (gấp gọn hoặc treo trên móc)\nClean white background xuyên suốt, soft studio lighting, editorial cao cấp. Không người mặc, không chữ, không watermark. Dưới 120 từ, chỉ trả về prompt.',
+        prompt: 'You are an expert Flux image prompt writer. Analyze this fashion product image carefully.\n\nWrite a single English text prompt (under 120 words) describing a LOOKBOOK COLLAGE for an external image AI to render. The collage shows 4 panels in a 2x2 grid:\n- Top-left: extreme close-up macro of fabric texture, weave pattern, surface detail\n- Top-right: overhead flat lay of the complete garment, symmetrically placed\n- Bottom-left: close-up of a distinctive design detail (collar, buttons, stitching, embellishment)\n- Bottom-right: fashion display — garment neatly folded or on a white wooden hanger\n\nStyle: clean white background throughout, soft studio lighting, high-end editorial. No people, no text, no watermarks.\n\nReturn ONLY the English prompt text. Do NOT generate or display any images.',
         prompt_mode: 'all',
         use_ai: true,
         provider: 'gemini',
