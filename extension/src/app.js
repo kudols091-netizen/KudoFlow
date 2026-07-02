@@ -2699,7 +2699,10 @@
           showModuleBlockedOverlay(activeTab, moduleCheck.module);
           // Không init tab content khi module bị khóa
         } else {
-          await initializeTab(activeTab.id);
+          await Promise.race([
+            initializeTab(activeTab.id),
+            new Promise(resolve => setTimeout(resolve, 15000)), // safety net: 15s max
+          ]);
         }
       }
 
