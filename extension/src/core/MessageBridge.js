@@ -897,6 +897,7 @@ class MessageBridge {
             text: text || '',
             images: imgArr,
             timeout: timeout || window.SystemConfig?.getTimeout('api_timeout_ms') || 60000,
+            new_conversation: true,
           },
           (resp) => {
             if (chrome.runtime.lastError) {

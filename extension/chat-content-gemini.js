@@ -352,6 +352,45 @@
 
   // ============ Delete current conversation (2026-05-29) ============
   // Flow: Click conversation actions menu → Click Delete → Confirm "Xoá" in mat-dialog
+  // Navigate to a fresh Gemini conversation (SPA navigation, no full page reload).
+  // Called before each AI Agent submit to avoid context contamination from previous chats.
+  async function navigateToNewConversation() {
+    try {
+      const url = location.href;
+      // Already at root /app — already a fresh conversation
+      if (/gemini\.google\.com\/app\/?(\?.*)?$/.test(url)) return true;
+
+      // Try clicking "New chat" button in sidebar first (SPA-safe)
+      const newChatSelectors = [
+        'a[href="/app"]',
+        'a[href="/app/"]',
+        'button[aria-label*="New chat" i]',
+        'button[aria-label*="new conversation" i]',
+        '[data-test-id="new-conversation-button"]',
+        'bard-sidenav a[href="/app"]',
+      ];
+      for (const sel of newChatSelectors) {
+        try {
+          const el = document.querySelector(sel);
+          if (el) {
+            simulateClick(el);
+            await sleep(1200);
+            return true;
+          }
+        } catch (_) {}
+      }
+
+      // Fallback: pushState to /app (React Router will pick it up)
+      history.pushState({}, '', '/app');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      await sleep(1200);
+      return true;
+    } catch (e) {
+      console.warn('[Gemini] navigateToNewConversation error:', e.message);
+      return false;
+    }
+  }
+
   // DOM ref: data/dom/gemini-delete-message-com.html
   // Strict Server-Only: TẤT CẢ selectors đọc từ provider_configs.dom_selector qua _queryWithFallback.
   // 4 keys (seeded migration 2026_07_06_100002):
@@ -1001,6 +1040,11 @@
               });
               return;
             }
+          }
+
+          // 0. Navigate to new conversation to avoid context contamination
+          if (message.new_conversation !== false) {
+            await navigateToNewConversation();
           }
 
           // 1. Snapshot baseline TRƯỚC khi submit
