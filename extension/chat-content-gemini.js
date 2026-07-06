@@ -745,6 +745,7 @@
   // ============ CG-8: Snapshot Gemini conversation state ============
   // Gemini DOM dùng <user-query> + <model-response> elements để phân tách turns.
   const _GEMINI_RESPONSE_SELECTORS = [
+    'message-content',            // 2025+ Gemini DOM (most reliable)
     'model-response',
     'ms-chat-turn',
     '.response-container-content',
@@ -754,12 +755,20 @@
 
   function snapshotGeminiState() {
     const responses = _queryAllWithFallback('response_container', _GEMINI_RESPONSE_SELECTORS);
+    // Capture total markdown text length as fallback when element selectors fail
+    let markdownTextLength = 0;
+    try {
+      for (const el of document.querySelectorAll('.markdown, .markdown-main-panel')) {
+        markdownTextLength += (el.innerText || '').length;
+      }
+    } catch (_) {}
     return {
       turnCount: responses.length,
       lastIds: Array.from(responses)
         .slice(-5)
         .map((r, i) => r.dataset?.turnId || r.id || `idx-${i}`),
       timestamp: Date.now(),
+      textLength: markdownTextLength,
     };
   }
 
@@ -864,8 +873,46 @@
     while (Date.now() - startTime < timeout) {
       const responses = _queryAllWithFallback('response_container', _GEMINI_RESPONSE_SELECTORS);
 
-      // Chưa có response mới so với baseline → poll tiếp
+      // Chưa có response mới so với baseline → thử markdown fallback trước khi poll tiếp
       if (responses.length <= baseline.turnCount) {
+        // Markdown fallback: khi selectors không match DOM Gemini hiện tại,
+        // detect qua sự tăng trưởng text của .markdown elements
+        let markdownFallbackText = '';
+        try {
+          const allMarkdownEls = document.querySelectorAll('.markdown, .markdown-main-panel');
+          let totalMarkdownLen = 0;
+          let lastMarkdownEl = null;
+          for (const el of allMarkdownEls) {
+            const t = (el.innerText || '').trim();
+            totalMarkdownLen += t.length;
+            if (t.length > 0) lastMarkdownEl = el;
+          }
+          const textGrowth = totalMarkdownLen - (baseline.textLength || 0);
+
+          if (textGrowth > 100) {
+            // Track stability của markdown text
+            if (totalMarkdownLen === lastTextLength && totalMarkdownLen >= 20) {
+              stableCount++;
+            } else {
+              stableCount = 0;
+              lastTextLength = totalMarkdownLen;
+            }
+
+            const signalGenerating = isGeminiGenerating();
+            if (!signalGenerating && stableCount >= STABLE_THRESHOLD && lastMarkdownEl) {
+              markdownFallbackText = stripScreenReaderPrefix((lastMarkdownEl.innerText || '').trim());
+            }
+          }
+        } catch (_) {}
+
+        if (markdownFallbackText && markdownFallbackText.length >= 20) {
+          console.log('[Gemini-text] Markdown fallback DONE — text length:', markdownFallbackText.length);
+          if (isImageGenerationResponse(markdownFallbackText)) {
+            return { success: false, error: 'IMAGE_GENERATION_DETECTED', text: markdownFallbackText };
+          }
+          return { success: true, text: markdownFallbackText, turnId: null };
+        }
+
         if (Date.now() - lastDiag > 5000) {
           console.log('[Gemini-text] Chưa có response mới — current:', responses.length, 'baseline:', baseline.turnCount);
           lastDiag = Date.now();
