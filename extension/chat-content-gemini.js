@@ -1045,6 +1045,14 @@
           // 0. Navigate to new conversation to avoid context contamination
           if (message.new_conversation !== false) {
             await navigateToNewConversation();
+            // Wait for editor to be ready before proceeding — navigation takes time to settle
+            let composerReady = false;
+            for (let _i = 0; _i < 20; _i++) {
+              const _comp = _queryWithFallback('composer') || document.querySelector('[contenteditable="true"], textarea');
+              if (_comp) { composerReady = true; break; }
+              await sleep(300);
+            }
+            if (composerReady) await sleep(300); // extra settle after editor found
           }
 
           // 1. Snapshot baseline TRƯỚC khi submit
