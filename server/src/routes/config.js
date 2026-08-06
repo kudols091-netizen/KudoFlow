@@ -39,6 +39,25 @@ module.exports = async function configRoutes(fastify) {
     };
   });
 
+  // GET /validation-rules
+  // Extension ValidationRules.js là Server-Only (không có _DEFAULTS fallback) — thiếu
+  // endpoint này thì sidebar log lỗi CONFIG_REQUIRED mỗi lần mở. Nguồn dữ liệu là
+  // system_settings.data.validation; giá trị dưới đây là mặc định khi admin chưa set.
+  fastify.get('/validation-rules', async () => {
+    const row = await queryOne('SELECT data, version FROM system_settings WHERE id = 1');
+    const validation = parseJSON(row?.data).validation || {};
+    return {
+      success: true,
+      data: {
+        prompt_max_length: validation.prompt_max_length ?? 5000,
+        quantity_min: validation.quantity_min ?? 1,
+        quantity_max: validation.quantity_max ?? 4,
+        workflow_max_run_duration_sec: validation.workflow_max_run_duration_sec ?? 3600,
+      },
+      meta: { version: row?.version || 1 },
+    };
+  });
+
   // GET /config/versions
   fastify.get('/config/versions', async () => {
     const sys = await queryOne('SELECT version FROM system_settings WHERE id = 1');
@@ -71,6 +90,56 @@ module.exports = async function configRoutes(fastify) {
         updated_at: row.updated_at,
       }
     };
+  });
+
+  // GET /location/me
+  // LocationCache.js dùng country để chọn hiển thị giá VND hay USD trong upgrade modal.
+  // Lookup qua ipwho.is (free, không cần API key). Cache theo IP 24h — trùng TTL cache
+  // phía extension, đủ để không chạm rate limit của dịch vụ free.
+  const geoCache = new Map();
+  const GEO_TTL_MS = 24 * 60 * 60 * 1000;
+  const GEO_FALLBACK = { country_code: 'US', country_name: 'United States', locale: 'en', currency: 'USD' };
+
+  function maskIp(ip) {
+    if (!ip) return null;
+    if (ip.includes(':')) return ip.split(':').slice(0, 2).join(':') + ':***';
+    const parts = ip.split('.');
+    return parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.***` : null;
+  }
+
+  fastify.get('/location/me', async (req) => {
+    // Railway đứng sau proxy → IP thật nằm ở x-forwarded-for, không phải req.ip.
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || '';
+    const isPublic = ip && !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/.test(ip);
+
+    if (!isPublic) return { success: true, data: { ...GEO_FALLBACK, ip_masked: maskIp(ip) } };
+
+    const cached = geoCache.get(ip);
+    if (cached && Date.now() - cached.at < GEO_TTL_MS) {
+      return { success: true, data: { ...cached.data, ip_masked: maskIp(ip) } };
+    }
+
+    let data = GEO_FALLBACK;
+    try {
+      const resp = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country,country_code`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      const json = await resp.json();
+      if (json?.success && json.country_code) {
+        const isVN = json.country_code === 'VN';
+        data = {
+          country_code: json.country_code,
+          country_name: json.country || GEO_FALLBACK.country_name,
+          locale: isVN ? 'vi' : 'en',
+          currency: isVN ? 'VND' : 'USD',
+        };
+        geoCache.set(ip, { data, at: Date.now() });
+      }
+    } catch (e) {
+      req.log.warn({ err: e.message }, 'location/me geo lookup failed, dùng fallback US');
+    }
+
+    return { success: true, data: { ...data, ip_masked: maskIp(ip) } };
   });
 
   // GET /entitlements

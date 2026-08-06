@@ -1,4 +1,37 @@
+const { query } = require('../plugins/db');
+
 module.exports = async function providerRoutes(fastify) {
+
+  // GET /providers
+  // ProviderMeta.js chỉ đọc {slug, name, status}. Bảng providers dùng cột id làm slug.
+  fastify.get('/providers', async () => {
+    const rows = await query('SELECT id, name, icon_url, status, version FROM providers ORDER BY id');
+    return {
+      success: true,
+      data: rows.map((r) => ({
+        slug: r.id,
+        name: r.name,
+        icon_url: r.icon_url || null,
+        status: r.status,
+      })),
+      meta: { version: rows.length ? Math.max(...rows.map((r) => r.version || 1)) : 1 },
+    };
+  });
+
+  // GET /provider-voices?provider=flow
+  // VoiceRegistry.js cache toàn bộ catalog rồi tự lọc theo v.provider, nên khi không
+  // truyền query param thì trả hết. config lưu dạng JSON string, extension tự parse.
+  fastify.get('/provider-voices', async (req) => {
+    const provider = req.query?.provider;
+    const rows = provider
+      ? await query('SELECT * FROM provider_voices WHERE provider = ? ORDER BY sort_order, id', [provider])
+      : await query('SELECT * FROM provider_voices ORDER BY provider, sort_order, id');
+    return {
+      success: true,
+      data: rows,
+      meta: { version: rows.length ? Math.max(...rows.map((r) => r.version || 1)) : 1 },
+    };
+  });
 
   // GET /providers/dom-selectors
   fastify.get('/providers/dom-selectors', async () => {

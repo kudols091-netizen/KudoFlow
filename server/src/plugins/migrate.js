@@ -179,6 +179,22 @@ async function migrate() {
       INDEX idx_status (status),
       INDEX idx_transfer (transfer_content)
     );
+
+    CREATE TABLE IF NOT EXISTS provider_voices (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      provider VARCHAR(64) NOT NULL,
+      slug VARCHAR(190) NOT NULL,
+      search_value VARCHAR(255),
+      gender VARCHAR(32),
+      description VARCHAR(512),
+      pitch_tier VARCHAR(32),
+      sort_order INT DEFAULT 0,
+      is_custom TINYINT(1) DEFAULT 0,
+      config JSON,
+      version INT DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_provider_slug (provider, slug)
+    );
   `;
 
   for (const sql of tables.split(';').map(s => s.trim()).filter(s => s.length > 10)) {
