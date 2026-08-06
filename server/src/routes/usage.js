@@ -64,10 +64,15 @@ module.exports = async function usageRoutes(fastify) {
        FROM usage_daily WHERE user_id = ?`,
       [req.user.id]
     );
+    // Khớp enum plan trong schema.sql. Bảng cũ dùng key 'ultra' (không có trong DB) và
+    // thiếu lifetime/team/trial → user lifetime rơi vào fallback free, dashboard hiện
+    // hạn mức 10 prompts thay vì 500. Giá trị lấy theo PLAN_FEATURES ở website/dashboard.html.
     const PLAN_LIMITS = {
-      free:  { prompts_per_batch: 10,  history: 50,  workflows: 5 },
-      pro:   { prompts_per_batch: 100, history: 500, workflows: 999 },
-      ultra: { prompts_per_batch: 500, history: 2000, workflows: 999 },
+      free:     { prompts_per_batch: 10,  history: 50,   workflows: 5 },
+      trial:    { prompts_per_batch: 10,  history: 50,   workflows: 5 },
+      pro:      { prompts_per_batch: 100, history: 500,  workflows: 999 },
+      team:     { prompts_per_batch: 500, history: 2000, workflows: 999 },
+      lifetime: { prompts_per_batch: 500, history: 2000, workflows: 999 },
     };
     const plan = req.user.plan || 'free';
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;

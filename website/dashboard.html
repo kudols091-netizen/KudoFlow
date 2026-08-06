@@ -195,8 +195,18 @@
   const token = localStorage.getItem('kudo_token');
   if (!token) { window.location.href = '/login'; }
 
-  const PLAN_COLORS = { free: 'badge-free', pro: 'badge-pro', ultra: 'badge-ultra' };
-  const PLAN_LABELS = { free: 'Free', pro: 'Pro', ultra: 'Ultra' };
+  // Khớp với enum plan trong schema.sql: free, trial, pro, team, lifetime.
+  // Trước đây bảng này chỉ có free/pro/ultra — 'ultra' không tồn tại trong DB, còn
+  // lifetime/team/trial thì thiếu, nên setPlanBadge rơi vào fallback và hiện "Free"
+  // cho user lifetime, mâu thuẫn với thẻ Gói dịch vụ ngay bên dưới.
+  const PLAN_COLORS = {
+    free: 'badge-free', trial: 'badge-free', pro: 'badge-pro',
+    team: 'badge-pro', lifetime: 'badge-ultra',
+  };
+  const PLAN_LABELS = {
+    free: 'Free', trial: 'Trial', pro: 'Pro',
+    team: 'Team', lifetime: 'Lifetime',
+  };
 
   function setPlanBadge(plan) {
     const cls = PLAN_COLORS[plan] || 'badge-free';
