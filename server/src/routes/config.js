@@ -155,7 +155,9 @@ module.exports = async function configRoutes(fastify) {
     }
 
     const plan = user?.plan || 'free';
-    const isPremium = plan === 'pro' || plan === 'lifetime';
+    // 'team' nằm trong enum plan của schema.sql nhưng trước đây bị bỏ sót ở đây,
+    // nên user gói Team bị extension khoá tính năng y như gói free.
+    const isPremium = plan === 'pro' || plan === 'team' || plan === 'lifetime';
     const isTrial = plan === 'trial';
     const isPaid = isPremium || isTrial;
 

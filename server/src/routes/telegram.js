@@ -127,7 +127,7 @@ module.exports = async function telegramRoutes(fastify) {
       [req.user.id]
     );
     const plan = req.user.plan || 'free';
-    const limits = plan === 'pro' || plan === 'lifetime'
+    const limits = plan === 'pro' || plan === 'team' || plan === 'lifetime'
       ? { hourly: -1, daily: -1 }
       : plan === 'trial'
       ? { hourly: 20, daily: 100 }
