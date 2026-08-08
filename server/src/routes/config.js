@@ -1,4 +1,5 @@
 const { queryOne, query } = require('../plugins/db');
+const { PROVIDER_MODELS_VERSION } = require('../services/config-version');
 
 function parseJSON(val) {
   if (!val) return {};
@@ -71,6 +72,11 @@ module.exports = async function configRoutes(fastify) {
         system_settings: sys?.version || 1,
         execution_config: exec?.version || 1,
         providers: providerVersions,
+        // ConfigVersionPoller đăng ký handler cho key này (→ ModelRegistry._updateFromVersion)
+        // nhưng trước đây backend không trả nó, nên handler chưa từng chạy và extension
+        // phải chờ hết TTL 4h mới thấy thay đổi model. Giá trị phải khớp meta.version
+        // mà /provider-models trả về.
+        provider_models: PROVIDER_MODELS_VERSION,
       }
     };
   });

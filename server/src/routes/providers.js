@@ -1,4 +1,5 @@
 const { query } = require('../plugins/db');
+const { PROVIDER_MODELS_VERSION } = require('../services/config-version');
 
 module.exports = async function providerRoutes(fastify) {
 
@@ -464,7 +465,7 @@ module.exports = async function providerRoutes(fastify) {
           // khi có ref video. Flow đã mở 10s cho Omni Flash ở mọi trường hợp.
           config: { duration_tier: 'advanced', supports_ref_video: true, max_ref_images: { image: 7, video: 1, total: 7 }, duration_overrides: [{ when: { has_ref_video: true }, force_duration: '10s' }] } },
       ],
-      meta: { version: 'v1.0' },
+      meta: { version: PROVIDER_MODELS_VERSION },
     };
   });
 
