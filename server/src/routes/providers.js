@@ -459,7 +459,10 @@ module.exports = async function providerRoutes(fastify) {
         { id: 5, provider: 'flow', media_type: 'video', name: 'Veo 3.1 - Quality', value: 'Veo 3.1 - Quality', is_default: false, is_premium: false, required_feature_key: null, min_extension_version: null, sort_order: 3,
           config: { supports_ref_images: false, max_ref_images: { image: 0 }, ref_support_overrides: [{ when: { input_type: 'Ingredients' }, supported: false, reason: 'Veo Quality Ingredients không hỗ trợ ref' }] } },
         { id: 6, provider: 'flow', media_type: 'video', name: 'Omni Flash', value: 'Omni Flash', is_default: false, is_premium: true, required_feature_key: 'gen_enabled', min_extension_version: null, sort_order: 4,
-          config: { supports_ref_video: true, max_ref_images: { image: 7, video: 1, total: 7 }, duration_overrides: [{ when: { has_ref_video: true }, force_duration: '10s' }] } },
+          // duration_tier 'advanced' → dropdown có thêm 10s. Trước đây thiếu key này nên
+          // GenTab rơi vào tier 'default' (4s/6s/8s), 10s chỉ ép được qua duration_overrides
+          // khi có ref video. Flow đã mở 10s cho Omni Flash ở mọi trường hợp.
+          config: { duration_tier: 'advanced', supports_ref_video: true, max_ref_images: { image: 7, video: 1, total: 7 }, duration_overrides: [{ when: { has_ref_video: true }, force_duration: '10s' }] } },
       ],
       meta: { version: 'v1.0' },
     };
