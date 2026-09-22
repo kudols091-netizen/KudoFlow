@@ -183,7 +183,52 @@
     console.warn(`[Selector:${PROVIDER}:overlay] 🚫 Config error overlay shown (lang=${lang}) — server unreachable, user action required`);
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Bổ sung selector còn thiếu (2026-09)
+  //
+  // Config ChatGPT trên server có 11 key nhưng THIẾU HẲN 3 key mà luồng đính ảnh
+  // tham khảo cần. Đây không phải lỗi thời — chúng chưa bao giờ được khai báo.
+  // Log thật khi chạy:
+  //   [Selector:chatgpt:file_input]  📦 HARDCODED | Trying 0 selectors  ❌ No match
+  //   [Selector:chatgpt:plus_button] 📦 HARDCODED | Trying 0 selectors  ❌ No match
+  //   [ChatGPT] Không tìm thấy input file để upload ref image
+  //
+  // Các selector dưới đây cố ý chọn loại BỀN: thuộc tính chuẩn HTML (type="file")
+  // và data-testid do OpenAI đặt — không dùng tên class sinh tự động.
+  const _BO_SUNG_CHATGPT = {
+    // Ô chọn file của ChatGPT là input ẩn. `input[type="file"]` là chuẩn HTML,
+    // không phụ thuộc cách OpenAI đặt tên class.
+    file_input: {
+      selectors: ['input[type="file"]'],
+      text_match: null, attribute: null, icon_text: null, button_text: null,
+    },
+    // Nút "+" mở menu đính kèm trong khung soạn tin.
+    plus_button: {
+      selectors: [
+        '[data-testid="composer-plus-btn"]',
+        'button[aria-label*="Attach"]',
+        'button[aria-label*="Đính kèm"]',
+        'button[aria-label*="Thêm"]',
+        'form button[aria-haspopup="menu"]',
+      ],
+      text_match: null, attribute: null, icon_text: null, button_text: null,
+    },
+    // Ảnh ChatGPT trả về nằm trên CDN oaiusercontent — dùng để nhận ra kết quả.
+    // Trùng ý với key `generated_image` đã có sẵn, nhưng code đính ảnh đọc key này.
+    cdn_image: {
+      selectors: ['img[src*="oaiusercontent"]', 'img[alt*="Generated"]'],
+      text_match: null, attribute: null, icon_text: null, button_text: null,
+    },
+  };
+
   function _getDynamicSelector(key) {
+    // Chỉ điền vào chỗ server BỎ TRỐNG. Nếu sau này server khai báo các key này,
+    // giá trị từ server được ưu tiên và nhánh dưới không chạy nữa.
+    const tuServer = _selectorConfig?.[PROVIDER]?.selectors?.[key];
+    if (!tuServer?.selectors?.length && _BO_SUNG_CHATGPT[key]) {
+      return _BO_SUNG_CHATGPT[key];
+    }
+
     const now = Date.now();
     if (_selectorConfig && (now - _selectorConfigTime) < _SELECTOR_CACHE_TTL) {
       return _selectorConfig?.[PROVIDER]?.selectors?.[key] || null;
