@@ -6366,7 +6366,7 @@ Prompt: "Hãy phân tích @chu_de và đề xuất 3 use case"
       body = `
         <div class="help-section">
           <h4>${icoPalette}<span>Flow - Generate (ảnh/video)</span></h4>
-          <p>Submit prompt đến Google Flow, gen ảnh hoặc video qua tab labs.google/fx/tools/flow.</p>
+          <p>Submit prompt đến Google Flow, gen ảnh hoặc video qua tab flow.google.com.</p>
           <ol>
             <li><strong>Media Type</strong>: Image / Video.</li>
             <li><strong>Model</strong>: Image (Nano Banana Pro/2) hoặc Video (Veo 3.1 Fast/Lite/Quality, Omni Flash). Mỗi model có config riêng (duration_tier, max_ref_images, supports_voice).</li>

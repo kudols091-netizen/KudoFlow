@@ -778,7 +778,8 @@
 
   // Regex chuẩn cho Flow URL — locale prefix có thể là vi/en/ja/th/ko/zh/.../không có
   // Examples: https://labs.google/fx/tools/flow, /fx/vi/tools/flow, /fx/en/tools/flow
-  const FLOW_HOMEPAGE_REGEX = /^https:\/\/labs\.google\/fx(\/[a-z]{2,5})?\/tools\/flow\/?(\?.*)?$/;
+  // 2026-09: thêm flow.google.com (domain mới) — homepage là root hoặc /vi, /en, ...
+  const FLOW_HOMEPAGE_REGEX = /^https:\/\/(labs\.google\/fx(\/[a-z]{2,5})?\/tools\/flow|flow\.google\.com(\/[a-z]{2,5})?)\/?(\?.*)?$/;
   const FLOW_PROJECT_REGEX = /\/project\/[a-f0-9-]+/;
   const _isFlowHomepageTab = (tab) => !!(tab?.url && FLOW_HOMEPAGE_REGEX.test(tab.url));
   const _isFlowProjectTab = (tab) => !!(tab?.url && FLOW_PROJECT_REGEX.test(tab.url));
@@ -2070,7 +2071,7 @@
       chrome.tabs.onActivated.addListener(async (activeInfo) => {
         try {
           const tab = await chrome.tabs.get(activeInfo.tabId);
-          if (tab?.url?.startsWith('https://labs.google/fx/')) {
+          if (tab?.url?.startsWith('https://labs.google/fx/') || tab?.url?.startsWith('https://flow.google.com/')) {
             // Chỉ set target tab khi đây là project tab (có /project/ trong URL)
             // Homepage tab không có editor/tiles → gửi message sẽ fail
             const isProjectTab = tab.url.match(/\/project\/[a-f0-9-]+/);
@@ -7113,7 +7114,7 @@
         setTimeout(checkMultiFlowTabs, 500);
       });
       chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => {
-        if (changeInfo.url && changeInfo.url.includes('labs.google/fx')) {
+        if (changeInfo.url && (changeInfo.url.includes('labs.google/fx') || changeInfo.url.includes('flow.google.com'))) {
           _multiTabDismissed = false;
           setTimeout(checkMultiFlowTabs, 500);
         }

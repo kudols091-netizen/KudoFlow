@@ -24,6 +24,37 @@ const NodeTemplates = {
     any:   ['text', 'image', 'video', 'frame', 'any'],
   },
 
+  // ─── Tuỳ biến cục bộ (2026-09) ────────────────────────────────────────────
+  // Đổi tên + thứ tự node trong picker. Lớp này đứng TRÊN cả server config:
+  // getType() lấy `serverConfig.name || localConfig.name` và getMergedTypes() bỏ qua
+  // localConfig.sortOrder, nên nếu chỉ sửa fallback trong `types` thì server sẽ ghi đè lại.
+  //
+  // - name: bỏ trống = giữ tên từ server/i18n (để bản dịch ngôn ngữ khác vẫn chạy).
+  // - sortOrder: số âm để 5 node này luôn nằm trên các node còn lại (mặc định 999,
+  //   hoặc sort_order server cấp thường bắt đầu từ 1).
+  USER_OVERRIDES: {
+    text:     { name: 'Promt',                   sortOrder: -50 },
+    chatgpt:  {                                  sortOrder: -40 },
+    generate: { name: 'Google Flow image/video', sortOrder: -30 },
+    grok:     {                                  sortOrder: -20 },
+    prompt:   {                                  sortOrder: -10 },
+  },
+
+  /**
+   * Áp override cục bộ lên config đã merge (local + server).
+   * @param {string} type - Node type key (đã normalize)
+   * @param {Object} config
+   * @returns {Object} config mới, không mutate input
+   */
+  _applyUserOverride(type, config) {
+    const override = this.USER_OVERRIDES[type];
+    if (!override || !config) return config;
+    const out = { ...config };
+    if (override.name) out.name = override.name;
+    if (override.sortOrder !== undefined) out.sortOrder = override.sortOrder;
+    return out;
+  },
+
   // Icon SVGs
   icons: {
     generate: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/><circle cx="6.5" cy="12.5" r="0.5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/></svg>`,
@@ -1404,7 +1435,7 @@ const NodeTemplates = {
 
     if (!serverConfig) {
       // console.debug('[NodeTemplates] getType', type, '→ local only (no server config)');
-      return localConfig;
+      return this._applyUserOverride(type, localConfig);
     }
     // console.debug('[NodeTemplates] getType', type, '→ merged (server name:', serverConfig.name, ')');
 
@@ -1419,7 +1450,7 @@ const NodeTemplates = {
     // CRITICAL: Ports server CHỈ chứa string identifiers (visibleWhen=isVideoFrames,
     // dynamicType=media_type). Resolver logic vẫn ở getNodePorts (extension) —
     // xem data/plans/NODE_RESOLVERS_REGISTRY.md.
-    return {
+    return this._applyUserOverride(type, {
       ...localConfig,
       // Metadata override
       name: serverConfig.name || localConfig.name,
@@ -1435,7 +1466,7 @@ const NodeTemplates = {
       ui: { ...(localConfig.ui || {}), ...(serverConfig.ui || {}) },
       // Raw config merged — provider-specific fields readable trực tiếp
       config: { ...(localConfig.config || {}), ...(serverConfig.config || {}) },
-    };
+    });
   },
 
   /**
@@ -1454,28 +1485,29 @@ const NodeTemplates = {
     for (const [key, localConfig] of Object.entries(local)) {
       const serverConfig = server[key];
       if (serverConfig) {
-        merged[key] = {
+        // _applyUserOverride đặt SAU sortOrder server để override cục bộ thắng.
+        merged[key] = this._applyUserOverride(key, {
           ...this.getType(key),
           sortOrder: serverConfig.sortOrder ?? 999,
-        };
+        });
       } else {
         // Local-only type (không có trên server) → sortOrder cao
-        merged[key] = {
+        merged[key] = this._applyUserOverride(key, {
           ...localConfig,
           sortOrder: 999,
-        };
+        });
       }
     }
 
     // Thêm types chỉ có trên server (không có trong local)
     for (const [key, serverConfig] of Object.entries(server)) {
       if (!merged[key]) {
-        merged[key] = {
+        merged[key] = this._applyUserOverride(key, {
           ...serverConfig,
           name: serverConfig.name || key,
           color: serverConfig.color || 'generate',
           sortOrder: serverConfig.sortOrder ?? 999,
-        };
+        });
       }
     }
 

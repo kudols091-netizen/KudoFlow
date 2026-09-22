@@ -400,11 +400,14 @@ _ensureEnrollment().catch(() => {});
 // Keys dropped vs prev version: chatgpt.base, gemini.base, grok.saved, grok.base, grok.cdnPatterns.
 // Removed keys vẫn available via _serverUrlsCache (sidebar sync) hoặc admin Providers config.
 const PROVIDER_URLS = {
+  // 2026-09: Google chuyển Flow sang flow.google.com, labs.google/fx/* trả 308.
+  // Giữ labs.google trong tabQueryPatterns cho tab cũ chưa redirect.
   flow: {
-    tabQuery: 'https://labs.google/fx/*',
-    createUrl: 'https://labs.google/fx/tools/flow',
-    localeCreate: 'https://labs.google/fx/vi/tools/flow',
-    base: 'https://labs.google/fx',
+    tabQuery: 'https://flow.google.com/*',
+    tabQueryPatterns: ['https://flow.google.com/*', 'https://labs.google/fx/*'],
+    createUrl: 'https://flow.google.com/',
+    localeCreate: 'https://flow.google.com/',
+    base: 'https://flow.google.com',
   },
   chatgpt: {
     tabQuery: '*://chatgpt.com/*',
@@ -741,8 +744,8 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   }
 
   // Check nếu download từ Google Flow
-  const hasFlowReferrer = referrer.includes('labs.google');
-  const hasFlowUrl = url.includes('labs.google') || url.includes('getMediaUrlRedirect');
+  const hasFlowReferrer = referrer.includes('labs.google') || referrer.includes('flow.google.com');
+  const hasFlowUrl = url.includes('labs.google') || url.includes('flow.google.com') || url.includes('getMediaUrlRedirect');
 
   // Video downloads
   const isVideoDownload = mime.startsWith('video/') ||
@@ -1537,6 +1540,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'ping') {
     sendResponse({ ok: true });
     return true;
+  }
+
+  // Mở side panel từ nút nổi trên trang Flow (flow-launcher.js).
+  // CRITICAL: chrome.sidePanel.open() đòi user gesture. Gesture chỉ còn hiệu lực
+  // trong cùng một task — hễ `await` bất cứ thứ gì trước khi gọi open() là Chrome
+  // báo "requires a user gesture" và từ chối. Vì vậy handler này KHÔNG query tab,
+  // mà lấy thẳng sender.tab.id (nút nằm sẵn trên tab Flow nên luôn đúng tab).
+  // Đây là lý do có handler riêng thay vì tái dùng 'openSidePanel' phía dưới —
+  // handler đó await chrome.tabs.query() trước nên không dùng được cho nút bấm.
+  if (message.action === 'openSidePanelFromTab') {
+    const tabId = sender?.tab?.id;
+    if (!tabId) {
+      sendResponse({ success: false, error: 'NO_SENDER_TAB' });
+      return false;
+    }
+    try {
+      const p = chrome.sidePanel.open({ tabId });
+      if (p && typeof p.then === 'function') {
+        p.then(() => sendResponse({ success: true }))
+         .catch((e) => {
+           console.warn('[Background] sidePanel.open failed:', e?.message);
+           sendResponse({ success: false, error: e?.message || 'OPEN_FAILED' });
+         });
+        return true; // async response
+      }
+      sendResponse({ success: true });
+    } catch (e) {
+      console.warn('[Background] sidePanel.open threw:', e?.message);
+      sendResponse({ success: false, error: e?.message || 'OPEN_THREW' });
+    }
+    return false;
   }
 
   // Phase 3: Receive URLs cache from sidebar (populated after server fetch)
@@ -2784,7 +2818,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (flowTabs.length === 0) {
           sendResponse({
             success: false,
-            error: 'Chưa mở Google Flow. Cần mở labs.google/fx để upload ảnh chụp.',
+            error: 'Chưa mở Google Flow. Cần mở flow.google.com để upload ảnh chụp.',
             action: 'openFlow'
           });
           return;
@@ -2941,7 +2975,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (flowTabs.length === 0) {
           sendResponse({
             success: false,
-            error: 'Chưa mở Google Flow. Cần mở labs.google/fx để upload ảnh chụp.',
+            error: 'Chưa mở Google Flow. Cần mở flow.google.com để upload ảnh chụp.',
             action: 'openFlow'
           });
           return;
@@ -4417,7 +4451,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         // Find a Flow tab to inject the fetch (Flow tabs have cookies)
-        const flowTabs = await chrome.tabs.query({ url: '*://labs.google/*' });
+        const flowTabs = await chrome.tabs.query({ url: ['*://flow.google.com/*', '*://labs.google/*'] });
         if (flowTabs.length === 0) {
           // Fallback: try direct fetch (might work if URL doesn't need auth)
           try {

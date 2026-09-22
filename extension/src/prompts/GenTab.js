@@ -2266,7 +2266,7 @@ class GenTab {
         // content script context (fallback)
         runAutoPrompt(payload);
       } else {
-        sendLog('Không thể kết nối đến Google Flow. Hãy mở labs.google/fx trước.', 'error');
+        sendLog('Không thể kết nối đến Google Flow. Hãy mở flow.google.com trước.', 'error');
         // SP-2.3: ExecutionGate cancel (no connection)
         if (window.ExecutionGate && _executionToken) {
           ExecutionGate.cancel(_executionToken);

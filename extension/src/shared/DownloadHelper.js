@@ -271,8 +271,8 @@ class DownloadHelper {
 
     // Fallback: query Flow tab directly
     return new Promise((resolve, reject) => {
-      chrome.tabs.query({ url: '*://labs.google/fx/*' }, (tabs) => {
-        const flowTab = tabs.find(t => t.url?.includes('labs.google/fx'));
+      chrome.tabs.query({ url: ['*://flow.google.com/*', '*://labs.google/fx/*'] }, (tabs) => {
+        const flowTab = tabs.find(t => t.url?.includes('flow.google.com') || t.url?.includes('labs.google/fx'));
         if (!flowTab?.id) return reject(new Error(window.I18n?.t('download.flowTabNotFound') || 'Không tìm thấy tab Flow'));
         chrome.tabs.sendMessage(flowTab.id, msg, (response) => {
           if (chrome.runtime.lastError) {

@@ -172,7 +172,7 @@ class ScreenCapture {
   static async _showOpenFlowDialog(message) {
     if (!window.customDialog) return false;
     return await window.customDialog.confirm(
-      message || window.I18n?.t('capture.openFlowMsg') || 'Chưa mở Google Flow. Cần mở labs.google/fx để upload ảnh chụp.',
+      message || window.I18n?.t('capture.openFlowMsg') || 'Chưa mở Google Flow. Cần mở flow.google.com để upload ảnh chụp.',
       {
         title: window.I18n?.t('capture.openFlowTitle') || 'Mở Google Flow',
         type: 'info',

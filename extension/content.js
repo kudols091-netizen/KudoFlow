@@ -13,6 +13,13 @@ self.__kudotoolaiContentJsLoaded__ = true;
 // MAIN CONTENT SCRIPT CODE STARTS HERE (inside else block, closed at end of file)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ─── Dấu hiệu nhận biết bản build ───
+// In ngay khi content script nạp xong. Mục đích: biết chắc tab đang chạy bản code nào.
+// Sau khi sửa file mà quên reload extension / quên F5, trang vẫn giữ bản cũ và log sẽ
+// gây hiểu nhầm — đối chiếu dòng này là cách nhanh nhất để loại trừ khả năng đó.
+var KUDO_BUILD = '1.1.17-flow-angular (2026-09-22)';
+console.log('%c[KudoToolAI] build ' + KUDO_BUILD, 'background:#3b82f6;color:#fff;padding:2px 6px;border-radius:3px');
+
 // Guard: var allows safe re-declaration when extension reloads and re-injects content.js
 var isRunning = false;
 var shouldStop = false;
@@ -24,6 +31,16 @@ var failedPrompts = [];
 var _tileCache = null;
 var _tileCacheTime = 0;
 var _TILE_CACHE_TTL = 250; // ms
+
+// ─── Nhận diện Google Flow bản mới (2026-09) ───
+// Google chuyển Flow từ labs.google/fx (React) sang flow.google.com (Angular).
+// Khai báo sớm ở đây vì _getMediaUrlPattern() nằm gần đầu file cũng cần dùng.
+var _NEW_FLOW_HOST = 'flow.google.com';
+var _NEW_FLOW_MEDIA_URL_SUBSTRING = 'flow.google.com/asb/'; // thay cho 'getMediaUrlRedirect'
+
+function _isNewFlowHost() {
+  try { return location.hostname === _NEW_FLOW_HOST; } catch (_) { return false; }
+}
 
 // ─── Multi-language Flow UI text matching — Strict Server-Only ───
 // Đọc từ backend provider_configs.dom_selector
@@ -80,14 +97,78 @@ function _textIncludesAny(text, patterns) {
  * Get tile container selector from dynamic config
  * @returns {{selector: string, attribute: string}} - Selector and attribute to use
  */
+// 2026-09: thuộc tính định danh media, khác nhau giữa 2 thế hệ Flow.
+//   Flow cũ (labs.google/fx, React):   data-tile-id  — đặt trên div bao ngoài
+//   Flow mới (flow.google.com, Angular): data-media-id — đặt NGAY TRÊN thẻ <img>
+// Chọn theo hostname tại thời điểm inject, nên một bản extension chạy được cả hai.
+var _TILE_FALLBACK_ATTRIBUTE = _isNewFlowHost() ? 'data-media-id' : 'data-tile-id';
+var _TILE_FALLBACK_SELECTOR = '[' + _TILE_FALLBACK_ATTRIBUTE + ']';
+
+/**
+ * Đọc ID media của một element, chấp nhận cả 2 thế hệ thuộc tính.
+ * Thay cho `tile.dataset.tileId` vốn chỉ đọc được data-tile-id.
+ * @param {Element|null} el
+ * @returns {string|null}
+ */
+function _tileIdOf(el) {
+  if (!el) return null;
+  try {
+    return el.getAttribute(_TILE_FALLBACK_ATTRIBUTE)
+        || el.getAttribute('data-media-id')
+        || el.getAttribute('data-tile-id')
+        || null;
+  } catch (_) { return null; }
+}
+
+/**
+ * Dựng selector tìm tile theo ID.
+ * LƯU Ý: không kèm tiền tố thẻ (trước đây có chỗ dùng `div[data-tile-id="..."]`).
+ * Trên Flow mới thuộc tính nằm trên <img> nên tiền tố `div` sẽ không khớp gì cả.
+ * @param {string} tileId
+ * @returns {string}
+ */
+function _tileSel(tileId) {
+  return '[' + _TILE_FALLBACK_ATTRIBUTE + '="' + tileId + '"]';
+}
+
+/**
+ * Ảnh/video của tile đã do SERVER phục vụ chưa? (chỉ dùng cho Flow mới)
+ *
+ * KHÔNG so theo host. Trước đây hàm này đòi `src` chứa 'flow.google.com/asb/' —
+ * chuỗi đó rút ra từ ảnh do AI sinh ra, nhưng ảnh NGƯỜI DÙNG TẢI LÊN được phục vụ
+ * từ host khác, nên tile upload không bao giờ được công nhận và vòng chờ quay tới
+ * timeout dù Flow đã nhận ảnh xong.
+ *
+ * Tiêu chí bền hơn, không phụ thuộc tên host Google dùng:
+ *   - `blob:` / `data:` → ảnh xem trước cục bộ, server CHƯA xử lý xong
+ *   - `.html` → placeholder của Flow
+ *   - `http(s)` → đã có URL thật từ server ⇒ xong
+ * @param {Element|null} tile
+ * @returns {boolean}
+ */
+function _mediaDaLenServer(tile) {
+  if (!tile) return false;
+  const media = _q('tile_video', tile)
+    || _q('tile_image', tile)
+    || _selfOrDescendant(tile, 'img, video');
+  const src = media?.src || media?.getAttribute?.('src') || '';
+  if (!src) return false;
+  if (/\.html($|\?)/i.test(src) || src.includes('media.html')) return false;
+  return src.startsWith('https://') || src.startsWith('http://');
+}
+
 function _getTileSelector() {
   var config = _getDynamicSelector('tile_container');
   var selectors = config?.selectors?.length ? config.selectors : [];
   var attribute = config?.attribute || null;
 
+  // Trước đây: config server thiếu → return {selector:null} → _getCachedTiles() trả []
+  // → getUniqueTileIds() luôn rỗng → upload báo "no tile ID returned" dù DOM vẫn đầy
+  // tile. Thất bại này im lặng (chỉ console.debug) nên rất khó lần ra.
   if (!selectors.length || !attribute) {
-    console.debug('[Tier3] _getTileSelector: tile_container config miss');
-    return { selector: null, attribute: null };
+    console.warn('[KudoToolAI] _getTileSelector: tile_container config miss → fallback ' + _TILE_FALLBACK_SELECTOR);
+    selectors = [_TILE_FALLBACK_SELECTOR];
+    attribute = _TILE_FALLBACK_ATTRIBUTE;
   }
 
   for (var i = 0; i < selectors.length; i++) {
@@ -98,6 +179,17 @@ function _getTileSelector() {
       }
     } catch (e) { /* invalid selector */ }
   }
+
+  // Không selector nào của server match DOM hiện tại → thử fallback trước khi bỏ cuộc.
+  if (selectors.indexOf(_TILE_FALLBACK_SELECTOR) === -1) {
+    try {
+      if (document.querySelectorAll(_TILE_FALLBACK_SELECTOR).length > 0) {
+        console.warn('[KudoToolAI] _getTileSelector: selector server không match DOM, dùng fallback ' + _TILE_FALLBACK_SELECTOR);
+        return { selector: _TILE_FALLBACK_SELECTOR, attribute: _TILE_FALLBACK_ATTRIBUTE };
+      }
+    } catch (e) { /* invalid selector */ }
+  }
+
   return { selector: selectors[0], attribute: attribute };
 }
 
@@ -130,6 +222,10 @@ if (typeof window !== 'undefined') {
 }
 
 function _getMediaUrlPattern() {
+  // Flow mới phục vụ ảnh qua https://flow.google.com/asb/<token>=s512-rw.
+  // Config server vẫn ghi 'getMediaUrlRedirect' (bản cũ) nên phải đè trước khi đọc cache,
+  // nếu không getExistingFileNames() sẽ không nhận ra ảnh nào.
+  if (_isNewFlowHost()) return _NEW_FLOW_MEDIA_URL_SUBSTRING;
   try {
     var cfg = _apiConfigsCacheLocal?.data?.flow?.configs?.image_url_pattern;
     if (cfg?.url_substring) return cfg.url_substring;
@@ -223,7 +319,7 @@ function _invalidateTileCache() {
  */
 function _getTileById(tileId) {
   var config = _getDynamicSelector('tile_container');
-  var attribute = config?.attribute || 'data-tile-id';
+  var attribute = config?.attribute || _TILE_FALLBACK_ATTRIBUTE;
   return document.querySelector(`[${attribute}="${tileId}"]`);
 }
 
@@ -701,7 +797,49 @@ function _hideCloneDetectedOverlay() {
  * @param {string} key - Selector key (e.g. 'tile_container', 'submit_button')
  * @returns {Object|null} - Selector config {selectors: [], attribute?, text_match?, icon_text?}
  */
+// ─────────────────────────────────────────────────────────────────────────────
+// Override DOM cho Google Flow bản mới (2026-09)
+//
+// Google viết lại Flow từ React (labs.google/fx) sang Angular (flow.google.com).
+// Config selector trên server vẫn là của bản cũ, và nếu chỉ sửa fallback cục bộ thì
+// giá trị server luôn thắng. Bảng này đè lên server, CHỈ khi đang chạy trên domain mới,
+// nên bản cũ (nếu Google còn phục vụ ở đâu đó) không bị ảnh hưởng.
+//
+// Chỉ khai báo những key đã xác minh bằng DOM thật. Key nào chưa có bằng chứng thì
+// để nguyên cho server quyết định — thà thiếu còn hơn đoán sai.
+//
+// Bằng chứng (outerHTML lấy trực tiếp từ Flow mới):
+//   <img _ngcontent-ng-c1370751348 class="image"
+//        src="https://flow.google.com/asb/AB-nOUY4...=s512-rw"
+//        data-media-id="ed9cd68b-8fb2-4eff-bdf1-a9017b1cf6ea">
+//
+// CẢNH BÁO: KHÔNG dùng `_ngcontent-ng-*` trong selector. Đó là mã scoping CSS do
+// Angular sinh ra, đổi sau mỗi lần Google build lại.
+// (_NEW_FLOW_HOST / _isNewFlowHost khai báo ở đầu file.)
+var _NEW_FLOW_SELECTOR_OVERRIDES = {
+  // data-tile-id đã biến mất hoàn toàn khỏi Flow mới (kiểm chứng: 0 kết quả trong
+  // Elements). data-media-id là thuộc tính thay thế, giá trị vẫn là UUID.
+  tile_container: {
+    selectors: ['[data-media-id]'],
+    attribute: 'data-media-id',
+    text_match: null, icon_text: null, button_text: null,
+  },
+  // Khác biệt quan trọng: data-media-id nằm NGAY TRÊN thẻ <img>, không phải trên div
+  // bao ngoài như data-tile-id trước đây. Nghĩa là tile_container và tile_image trỏ
+  // vào cùng một element. `_q()` đã được sửa để xử lý trường hợp scope chính là kết quả.
+  tile_image: {
+    selectors: ['img[data-media-id]', 'img'],
+    attribute: null, text_match: null, icon_text: null, button_text: null,
+  },
+};
+
 function _getDynamicSelector(key) {
+  // Override đứng TRƯỚC cache server: config server còn là của Flow cũ, nếu để nó
+  // chạy trước thì override không bao giờ có tác dụng.
+  if (_isNewFlowHost() && _NEW_FLOW_SELECTOR_OVERRIDES[key]) {
+    return _NEW_FLOW_SELECTOR_OVERRIDES[key];
+  }
+
   var now = Date.now();
   if (_selectorConfig && (now - _selectorConfigTime) < _SELECTOR_CACHE_TTL) {
     return _selectorConfig?.flow?.selectors?.[key] || null;
@@ -732,16 +870,39 @@ function _selStr(key) {
   return cfg?.selectors?.length ? cfg.selectors.join(', ') : null;
 }
 
+/**
+ * querySelector chỉ tìm trong HẬU DUỆ, không xét chính element đang scope.
+ * Trên Flow mới, data-media-id nằm ngay trên <img> nên tile_container và tile_image
+ * trỏ vào CÙNG một element — `_selfOrDescendant(tile, 'img')` sẽ trả null.
+ * Vì vậy khi không tìm thấy hậu duệ nào, kiểm tra xem chính scope có khớp không.
+ */
+function _selfOrDescendant(root, selector) {
+  var found = root.querySelector(selector);
+  if (found) return found;
+  try {
+    if (root !== document && typeof root.matches === 'function' && root.matches(selector)) {
+      return root;
+    }
+  } catch (_) { /* selector không dùng được với matches() */ }
+  return null;
+}
+
 function _q(key, scope) {
   var s = _selStr(key);
   if (!s) { console.debug(`[Tier3] _q(${key}) miss`); return null; }
-  return (scope || document).querySelector(s);
+  return _selfOrDescendant(scope || document, s);
 }
 
 function _qa(key, scope) {
   var s = _selStr(key);
   if (!s) { console.debug(`[Tier3] _qa(${key}) miss`); return []; }
-  return (scope || document).querySelectorAll(s);
+  var root = scope || document;
+  var list = root.querySelectorAll(s);
+  if (list.length === 0) {
+    var self = _selfOrDescendant(root, s);
+    if (self) return [self];
+  }
+  return list;
 }
 
 function _queryWithFallback(key, defaultSelectors) {
@@ -884,14 +1045,33 @@ function _detectFlowUploadError() {
  * slate_editor → main → body (Flow drop handler thường ở page-level nên bubbles tới). Text nút
  * confirm đọc từ config `video_upload_confirm.text_match`, degraded fallback English.
  */
-async function _dropVideoToFlow(file) {
-  const dt = new DataTransfer();
-  dt.items.add(file);
-
-  // Drop target: ưu tiên editor/main (drop handler page-level sẽ bắt qua bubbling), fallback body.
-  const dropTarget = _q('slate_editor')
+/**
+ * Chọn element để thả file vào.
+ * Drop handler của Flow đặt ở cấp trang nên event sẽ bubble lên tới nơi cần thiết;
+ * mục tiêu chỉ cần là một element nằm trong vùng nội dung.
+ *
+ * Flow cũ có slate_editor (Slate.js của React). Flow mới chạy Angular, không còn
+ * Slate, nên _q('slate_editor') trả null và ta rơi xuống <main> rồi <body>.
+ * @returns {Element}
+ */
+function _pickFlowDropTarget() {
+  return _q('slate_editor')
     || document.querySelector('main')
     || document.body;
+}
+
+/**
+ * Dispatch chuỗi sự kiện kéo-thả mang theo file lên trang Flow.
+ * Tách riêng để cả ảnh và video dùng chung — Flow mới bỏ input[type=file] nên
+ * ảnh cũng buộc phải đi đường này.
+ * @param {File} file
+ * @param {string} nhan - nhãn ghi log ('image' | 'video')
+ * @returns {boolean} true nếu dispatch trót lọt
+ */
+function _dispatchFileDrop(file, nhan) {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  const dropTarget = _pickFlowDropTarget();
 
   const fire = (type) => {
     let e;
@@ -904,14 +1084,48 @@ async function _dropVideoToFlow(file) {
     try { if (!e.dataTransfer) Object.defineProperty(e, 'dataTransfer', { value: dt }); } catch (_) {}
     dropTarget.dispatchEvent(e);
   };
+
   try {
     fire('dragenter');
     fire('dragover');
     fire('drop');
-    console.log(`[uploadFilesToFlow] video drop dispatched on <${(dropTarget.tagName || 'body').toLowerCase()}> file="${file.name}"`);
+    // Ghi rõ element đích: chỉ biết tagName thì không đủ để biết đã thả đúng chỗ chưa.
+    const moTa = [
+      (dropTarget.tagName || 'BODY').toLowerCase(),
+      dropTarget.id ? '#' + dropTarget.id : '',
+      dropTarget.classList?.length ? '.' + Array.from(dropTarget.classList).slice(0, 3).join('.') : '',
+      dropTarget.getAttribute?.('contenteditable') ? '[contenteditable]' : '',
+    ].join('');
+    console.log(`[uploadFilesToFlow] ${nhan} drop dispatched on <${moTa}> file="${file.name}"`);
+    return true;
   } catch (e) {
-    console.warn('[uploadFilesToFlow] video drop dispatch error:', e?.message);
+    console.warn(`[uploadFilesToFlow] ${nhan} drop dispatch error:`, e?.message);
+    return false;
   }
+}
+
+/**
+ * Thả ẢNH vào Flow. Dùng khi không tìm thấy input[type=file] — Flow mới (Angular)
+ * mở hộp chọn file bằng File System Access API (showOpenFilePicker) nên không có
+ * element nào để gán `.files`. Kiểm chứng: tìm `type="file"` trong DOM ra 0 kết quả,
+ * kể cả sau khi đã mở hộp thoại "Tải nội dung lên".
+ *
+ * Khác _dropVideoToFlow: ảnh không kích hoạt modal xác nhận bản quyền.
+ * @param {File} file
+ */
+async function _dropImageToFlow(file) {
+  return _dispatchFileDrop(file, 'image');
+}
+
+// Export ra window theo đúng quy ước sẵn có của file (xem _getMediaUrlPattern ở trên):
+// tiện cho việc kiểm thử và gỡ lỗi trực tiếp từ Console của tab Flow.
+if (typeof window !== 'undefined') {
+  window._pickFlowDropTarget = _pickFlowDropTarget;
+  window._dropImageToFlow = _dropImageToFlow;
+}
+
+async function _dropVideoToFlow(file) {
+  _dispatchFileDrop(file, 'video');
 
   // Confirm modal "I agree" — Flow Prohibited Use Policy. Config text_match + fallback English.
   const cfg = _getDynamicSelector('video_upload_confirm');
@@ -1498,7 +1712,7 @@ var FloatingTracker = {
       var tilesWithProgress = [];
       for (var t = 0; t < allTiles.length; t++) {
         var tileEl = allTiles[t];
-        var tid = tileEl.getAttribute('data-tile-id');
+        var tid = _tileIdOf(tileEl);
         if (!tid || allPreTileIds.has(tid)) continue; // Bỏ qua tiles cũ
 
         var pct = typeof extractTileProgress === 'function' ? extractTileProgress(tileEl) : null;
@@ -3375,7 +3589,7 @@ async function downloadTileMedia(tileId, promptText, taskName, fileName, resolut
   // U-2.2: file_id lookup trước (persistent, chính xác nhất)
   if (flowFileId) {
     const tile = findTileByFileId(flowFileId);
-    if (tile) tileId = tile.dataset.tileId;
+    if (tile) tileId = _tileIdOf(tile);
   }
 
   // Auto-detect video tile và dùng video resolution nếu có
@@ -3830,7 +4044,7 @@ async function downloadViaFlowMenu(tileId, resolution, fileName, promptText, tas
     // Media có thể đã thay đổi trong thời gian chờ menu render
     const mediaForValidation = isVideo
       ? _q('tile_video', tile)
-      : _q('tile_video', tile) || tile.querySelector('img');
+      : _q('tile_video', tile) || _selfOrDescendant(tile, 'img');
     if (mediaForValidation) {
       const currentSrc = mediaForValidation.src || '';
       const rawSrc = mediaForValidation.getAttribute('src') || '';
@@ -3966,7 +4180,7 @@ function _waitForTileMediaReady(tile, timeoutMs = 10000, preferVideo = false) {
         // Nếu chưa có <video> element VÀ chưa quá videoFallbackMs, tiếp tục poll
         // Sau videoFallbackMs, fallback sang <img> sớm (không chờ hết timeout)
         if (!media && status === 'success' && (Date.now() - startTime >= videoFallbackMs)) {
-          const img = tile.querySelector('img');
+          const img = _selfOrDescendant(tile, 'img');
           if (img) {
             const imgSrc = img.src || '';
             const imgRaw = img.getAttribute('src') || '';
@@ -3983,7 +4197,7 @@ function _waitForTileMediaReady(tile, timeoutMs = 10000, preferVideo = false) {
           }
         }
       } else {
-        media = _q('tile_video', tile) || tile.querySelector('img');
+        media = _q('tile_video', tile) || _selfOrDescendant(tile, 'img');
       }
       if (media && status === 'success') {
         const src = media.src || '';
@@ -4024,7 +4238,7 @@ function _waitForTileMediaReady(tile, timeoutMs = 10000, preferVideo = false) {
       if (Date.now() - startTime >= timeoutMs) {
         // preferVideo fallback: nếu đợi video timeout, thử lấy <img> thay thế
         if (preferVideo) {
-          const img = tile.querySelector('img');
+          const img = _selfOrDescendant(tile, 'img');
           if (img) {
             const imgSrc = img.src || '';
             const imgRaw = img.getAttribute('src') || '';
@@ -4108,17 +4322,32 @@ function _releaseCtxMenuLock() {
 function extractFileName(tile) {
   if (!tile) return null;
   // Kiểm tra cache trước — tránh lặp lại 3 querySelectorAll mỗi polling cycle
-  const tileId = tile.dataset?.tileId;
+  const tileId = _tileIdOf(tile);
   if (tileId && _fileNameCache.has(tileId)) return _fileNameCache.get(tileId);
   const urlPattern = _getMediaUrlPattern();
   if (!urlPattern) return null;
+
+  // ─── Flow mới ───
+  // Bản cũ tách 2 khái niệm: tile_id (tạm, có ngay khi bắt đầu upload) và file_name
+  // (UUID bền vững, chỉ có sau khi server xử lý xong) — dùng để biết upload đã hoàn tất.
+  // Flow mới không còn file_name trong URL: dạng /asb/<token>=s512-rw, không có query
+  // param nào để parse. data-media-id chính là định danh bền vững nên dùng luôn nó.
+  //
+  // Để không nhận nhầm tile đang xử lý là đã xong, chỉ trả ID khi ảnh đã do SERVER
+  // phục vụ (xem _mediaDaLenServer bên dưới để biết vì sao không so theo host).
+  if (_isNewFlowHost()) {
+    if (!tileId) return null;
+    if (!_mediaDaLenServer(tile)) return null;
+    _fileNameCache.set(tileId, tileId);
+    return tileId;
+  }
   const candidates = [
     ...tile.querySelectorAll(`img[src*="${urlPattern}"]`),
     ...tile.querySelectorAll(`a[href*="${urlPattern}"]`),
     ...tile.querySelectorAll(`[src*="${urlPattern}"]`)
   ];
   if (candidates.length === 0) {
-    const img = tile.querySelector('img');
+    const img = _selfOrDescendant(tile, 'img');
     if (img?.src?.includes(urlPattern)) candidates.push(img);
   }
   for (const el of candidates) {
@@ -4165,9 +4394,11 @@ function extractThumbnailUrl(tile) {
 
   const _muPat = _getMediaUrlPattern();
   if (_muPat) {
-    const imgFlow = tile.querySelector(`img[src*="${_muPat}"]`);
+    // _selfOrDescendant thay cho querySelector: trên Flow mới tile CHÍNH LÀ thẻ <img>,
+    // mà querySelector chỉ tìm hậu duệ nên sẽ bỏ sót chính nó.
+    const imgFlow = _selfOrDescendant(tile, `img[src*="${_muPat}"]`);
     if (imgFlow?.src) return imgFlow.src;
-    const video = tile.querySelector(`video[src*="${_muPat}"]`);
+    const video = _selfOrDescendant(tile, `video[src*="${_muPat}"]`);
     if (video?.src) return video.src;
   }
 
@@ -4176,11 +4407,11 @@ function extractThumbnailUrl(tile) {
   if (imgCdn?.src) return imgCdn.src;
 
   // Fallback: bất kỳ img có src http/https
-  const anyImg = tile.querySelector('img[src^="http"]');
+  const anyImg = _selfOrDescendant(tile, 'img[src^="http"]');
   if (anyImg?.src) return anyImg.src;
 
   // Fallback cuối: img có src bắt đầu bằng /fx/ (relative URL)
-  const relativeImg = tile.querySelector('img[src^="/fx/"]');
+  const relativeImg = _selfOrDescendant(tile, 'img[src^="/fx/"]');
   if (relativeImg?.src) return relativeImg.src;
 
   return null;
@@ -4340,7 +4571,10 @@ function getUniqueTileIds(forceRefresh = false) {
     _invalidateTileCache();
   }
   const tiles = _getCachedTiles();
-  return [...new Set([...tiles].map(t => t.dataset.tileId).filter(Boolean))];
+  // Đọc theo attribute trong config thay vì hardcode dataset.tileId. _getCachedTiles()
+  // vừa refresh _tileSelectorCache nên giá trị ở đây luôn khớp selector vừa dùng.
+  const attribute = _tileSelectorCache?.attribute || _TILE_FALLBACK_ATTRIBUTE;
+  return [...new Set([...tiles].map(t => t.getAttribute(attribute)).filter(Boolean))];
 }
 
 /**
@@ -4353,6 +4587,18 @@ function getUniqueTileIds(forceRefresh = false) {
  */
 function getExistingFileNames() {
   const fileNameSet = new Set();
+
+  // Flow mới: quét theo data-media-id, KHÔNG theo URL pattern. Lọc bằng `[src*=host]`
+  // sẽ bỏ sót ảnh người dùng tải lên vì chúng phục vụ từ host khác ảnh AI sinh ra.
+  // Định danh vốn nằm sẵn trên chính element nên không cần parse URL.
+  if (_isNewFlowHost()) {
+    for (const el of document.querySelectorAll(_TILE_FALLBACK_SELECTOR)) {
+      const id = _tileIdOf(el);
+      if (id) fileNameSet.add(id);
+    }
+    return fileNameSet;
+  }
+
   const _pat = _getMediaUrlPattern();
   if (!_pat) return fileNameSet;
   const mediaEls = document.querySelectorAll(`[src*="${_pat}"], [href*="${_pat}"]`);
@@ -4762,17 +5008,35 @@ function detectTileStatus(tileEl) {
   if (!tileEl) return 'processing';
 
   // Kiểm tra cache (TTL 1.5 giây) — giảm 4+ DOM queries/tile khi gọi từ nhiều polling loops
-  var _statusTileId = tileEl.dataset?.tileId;
+  var _statusTileId = _tileIdOf(tileEl);
   if (_statusTileId) {
     var _cached = _statusCache.get(_statusTileId);
     if (_cached && (Date.now() - _cached.ts) < 1500) return _cached.status;
   }
 
   // 1. Check success TRƯỚC — có media với src hợp lệ
-  const media = _q('tile_video', tileEl) || tileEl.querySelector('img');
+  //
+  // BUG (Flow mới, 2026-09): trước đây dòng này là `tileEl.querySelector('img')`.
+  // Trên Flow mới tileEl CHÍNH LÀ thẻ <img> (data-media-id nằm trên nó), mà
+  // querySelector chỉ tìm hậu duệ → media luôn null → hàm luôn trả 'processing'
+  // → vòng chờ upload quay mãi rồi timeout ("Tile still processing after tab activate").
+  // _q('tile_image') đi qua _selfOrDescendant nên xét được cả chính element.
+  const media = _q('tile_video', tileEl)
+    || _q('tile_image', tileEl)
+    || _selfOrDescendant(tileEl, 'img');
   if (media && media.src && !media.src.startsWith('data:')) {
     const mediaSrc = media.src || '';
     const rawSrc = media.getAttribute('src') || '';
+
+    // Flow mới: `blob:` là ảnh xem trước cục bộ trong lúc chờ server → chưa xong.
+    // Có URL http(s) thật → xong. Không so theo host (xem _mediaDaLenServer): ảnh
+    // người dùng tải lên phục vụ từ host khác ảnh do AI sinh ra.
+    if (_isNewFlowHost()) {
+      const status = _mediaDaLenServer(tileEl) ? 'success' : 'processing';
+      if (_statusTileId) _statusCache.set(_statusTileId, { status: status, ts: Date.now() });
+      return status;
+    }
+
     const isPlaceholder =
       mediaSrc.includes('media.html') ||
       mediaSrc.endsWith('.html') ||
@@ -4880,7 +5144,7 @@ function detectMediaType(tile) {
   const video = _q('tile_video', tile);
   if (video) return 'video';
   // Fallback: detect video tile via img alt="Video thumbnail" (video element may not render yet)
-  const img = tile.querySelector('img');
+  const img = _selfOrDescendant(tile, 'img');
   if (img?.alt?.toLowerCase().includes('video')) return 'video';
   return 'image';
 }
@@ -4936,7 +5200,7 @@ async function waitForNewTiles(preTileIds, timeoutMs = 120000, preFileNames = nu
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['class', 'src', 'data-tile-id']
+    attributeFilter: ['class', 'src', 'data-tile-id', 'data-media-id']
   });
 
   // Dọn dẹp observer khi function kết thúc
@@ -5057,7 +5321,7 @@ async function waitForNewTiles(preTileIds, timeoutMs = 120000, preFileNames = nu
         for (const tid of newTiles) {
           const tile = _getTileById(tid);
           if (!tile) continue;
-          const img = tile.querySelector('img');
+          const img = _selfOrDescendant(tile, 'img');
           let video = _q('tile_video', tile);
 
           // CRITICAL: Video element có thể render SAU khi tile status = 'success'
@@ -6542,11 +6806,11 @@ async function addFileToPrompt(fileId, fileName, flowFileId) {
     if (flowFileId) {
       const tile = findTileByFileId(flowFileId);
       if (tile) {
-        fileId = tile.dataset.tileId;
+        fileId = _tileIdOf(tile);
       }
     }
 
-    let els = document.querySelectorAll(`div[data-tile-id="${fileId}"]`);
+    let els = document.querySelectorAll(_tileSel(fileId));
 
     // Cross-project validation: nếu tìm thấy tile nhưng file_name không match → không dùng
     if (els.length > 0 && fileName) {
@@ -6564,10 +6828,10 @@ async function addFileToPrompt(fileId, fileName, flowFileId) {
         for (const tile of allTiles) {
             const fn = extractFileName(tile);
             if (fn === fileName) {
-                const newId = tile.dataset.tileId;
+                const newId = _tileIdOf(tile);
                 console.log(`[KudoToolAI] addFileToPrompt: resolved ${fileId.substring(0, 20)}... → ${newId.substring(0, 20)}... via file_name`);
                 fileId = newId;
-                els = document.querySelectorAll(`div[data-tile-id="${fileId}"]`);
+                els = document.querySelectorAll(_tileSel(fileId));
                 break;
             }
         }
@@ -6580,15 +6844,15 @@ async function addFileToPrompt(fileId, fileName, flowFileId) {
         console.log(`[KudoToolAI] addFileToPrompt: tile chưa thấy (id=${fileId.substring(0, 20)}...) → ensureFlowTilesLoaded + retry`);
         // Có file_name → truyền target để zoom multi-pass + early-exit (nhanh + chính xác hơn)
         try { await ensureFlowTilesLoaded(false, fileName ? [fileName] : []); } catch (_) {}
-        els = document.querySelectorAll(`div[data-tile-id="${fileId}"]`);
+        els = document.querySelectorAll(_tileSel(fileId));
         if (els.length === 0 && fileName) {
             const allTilesRetry = document.querySelectorAll(_getTileSelectorString());
             for (const tile of allTilesRetry) {
                 if (extractFileName(tile) === fileName) {
-                    const newId = tile.dataset.tileId;
+                    const newId = _tileIdOf(tile);
                     console.log(`[KudoToolAI] addFileToPrompt: post-load resolved ${fileId.substring(0, 20)}... → ${newId.substring(0, 20)}... via file_name`);
                     fileId = newId;
-                    els = document.querySelectorAll(`div[data-tile-id="${fileId}"]`);
+                    els = document.querySelectorAll(_tileSel(fileId));
                     break;
                 }
             }
@@ -7760,7 +8024,7 @@ function scanGalleryTiles() {
     const tile = _getTileById(tileId);
     if (!tile) continue;
 
-    const img = tile.querySelector('img');
+    const img = _selfOrDescendant(tile, 'img');
     const video = _q('tile_video', tile);
     let mediaType = 'unknown';
     let mediaSrc = '';
@@ -8597,8 +8861,8 @@ async function ensureFlowTilesLoaded(force = false, targetFileNames = []) {
   let selector = _getTileSelectorString();
 
   // DEBUG: Log selector info
-  const rawTiles = document.querySelectorAll('[data-tile-id]');
-  console.log(`[KudoToolAI] ensureFlowTilesLoaded DEBUG: force=${force}, selector="${selector}", rawTiles=[data-tile-id]=${rawTiles.length}, URL=${location.href.substring(0, 80)}`);
+  const rawTiles = document.querySelectorAll(_TILE_FALLBACK_SELECTOR);
+  console.log(`[KudoToolAI] ensureFlowTilesLoaded DEBUG: force=${force}, selector="${selector}", rawTiles=${_TILE_FALLBACK_SELECTOR}=${rawTiles.length}, URL=${location.href.substring(0, 80)}`);
 
   const tilesBeforeCount = selector ? document.querySelectorAll(selector).length : 0;
 
@@ -8621,7 +8885,7 @@ async function ensureFlowTilesLoaded(force = false, targetFileNames = []) {
     for (const tile of tiles) {
       const fn = extractFileName(tile);
       if (fn && want.has(fn)) {
-        foundTiles[fn] = tile.dataset.tileId;
+        foundTiles[fn] = _tileIdOf(tile);
         lastFoundEl = tile;
         want.delete(fn);
         if (want.size === 0) break;
@@ -9117,7 +9381,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       for (const fileId of fileIds) {
         const tile = _getTileById(fileId);
         if (!tile) continue;
-        const img = tile.querySelector('img');
+        const img = _selfOrDescendant(tile, 'img');
         const video = _q('tile_video', tile);
         const fileName = extractFileName(tile);
         const flowInfo = extractFlowFileInfo(tile);
@@ -9171,7 +9435,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const fnToTileId = new Map();
         const allTiles = document.querySelectorAll(_getTileSelectorString());
         allTiles.forEach(tile => {
-          const tileId = tile.dataset.tileId;
+          const tileId = _tileIdOf(tile);
           if (!tileId) return;
           const fn = extractFileName(tile);
           if (fn) fnToTileId.set(fn, tileId);
@@ -9222,9 +9486,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const urlToTileData = new Map(); // normalized_url → { tileId, file_name }
         const allTiles = document.querySelectorAll(_getTileSelectorString());
         allTiles.forEach(tile => {
-          const tileId = tile.dataset.tileId;
+          const tileId = _tileIdOf(tile);
           if (!tileId) return;
-          const img = tile.querySelector('img');
+          const img = _selfOrDescendant(tile, 'img');
           const video = _q('tile_video', tile);
           const src = img?.src || video?.poster || video?.src || '';
           if (src && !src.includes('chrome-extension') && !src.startsWith('data:')) {
@@ -9287,7 +9551,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       _tileSelectorCache = null;
       let _selector = _getTileSelectorString();
       // DEBUG: Log selector và raw tile count
-      const _rawTiles = document.querySelectorAll('[data-tile-id]');
+      const _rawTiles = document.querySelectorAll(_TILE_FALLBACK_SELECTOR);
       console.log(`[KudoToolAI] correctStaleFileIds DEBUG: selector="${_selector}", rawTiles=${_rawTiles.length}, URL=${location.href.substring(0, 60)}`);
       const totalTiles = _selector ? document.querySelectorAll(_selector).length : 0;
       const validIds = []; // tile_id tồn tại VÀ file_name match
@@ -9320,7 +9584,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (!savedFileId) continue;
         const tile = findTileByFileId(savedFileId);
         if (tile) {
-          const newTileId = tile.dataset.tileId;
+          const newTileId = _tileIdOf(tile);
           if (newTileId && newTileId !== oldId) {
             corrections[oldId] = newTileId;
           }
@@ -9408,7 +9672,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       for (const tile of tiles) {
         const fn = extractFileName(tile);
         if (fn === fileName) {
-          return { tileId: tile.dataset.tileId };
+          return { tileId: _tileIdOf(tile) };
         }
       }
       return { tileId: null };
@@ -9447,11 +9711,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Quét tile hiện có trong DOM, append vào images (dedup theo tile_id). Tách thành hàm để
       // deep-scan gọi lại sau mỗi bước scroll (Flow virtual-scroll unmount tile ngoài viewport).
       const _scanCurrent = () => {
-        const tiles = document.querySelectorAll(tileSelector || '[data-tile-id]');
+        const tiles = document.querySelectorAll(tileSelector || _TILE_FALLBACK_SELECTOR);
         tiles.forEach(tile => {
-          const tileId = tile.dataset.tileId;
+          const tileId = _tileIdOf(tile);
           if (!tileId || seenIds.has(tileId)) return;
-          const img = tile.querySelector('img');
+          const img = _selfOrDescendant(tile, 'img');
           const video = _q('tile_video', tile);
           const fileName = extractFileName(tile);
           const isVideoByAlt = img?.alt?.toLowerCase().includes('video');
@@ -9524,8 +9788,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const src = img.src;
           if (!src || src.includes('chrome-extension') || img.naturalWidth < 50) return;
           // Use tileSelector we already have (or fallback to [data-tile-id])
-          const parentTile = img.closest(tileSelector || '[data-tile-id]');
-          const fileId = parentTile?.dataset?.tileId;
+          const parentTile = img.closest(tileSelector || _TILE_FALLBACK_SELECTOR);
+          const fileId = _tileIdOf(parentTile);
           // Skip if no valid tile ID found (don't use flow_img_X fallback anymore)
           if (!fileId) {
             console.warn('[KudoToolAI] scanFlowImages: skipping img without tile ID');
@@ -9550,9 +9814,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // activate lại → tab auto-reload → Flow React app bootstrap mất ~500ms-vài giây
       // (Windows hardware yếu chậm hơn) → input[type=file] chưa xuất hiện trong DOM.
       // Trước fix: return ngay → ImmediateUploader throw → ⚠️ icon trên image node.
+      // Flow mới (Angular) KHÔNG có input[type=file]: nút "Tải nội dung lên" gọi
+      // showOpenFilePicker() của File System Access API, không tạo element nào trong DOM.
+      // Kiểm chứng trên trang thật: tìm `type="file"` ra 0 kết quả, kể cả sau khi đã
+      // mở hộp thoại upload. Nên ở domain mới ta chờ ngắn rồi chuyển thẳng sang kéo-thả,
+      // thay vì đứng chờ 8 giây mỗi lần upload rồi mới báo lỗi.
+      let dungKeoTha = false;
       let flowInputs = Array.from(document.querySelectorAll('input[type="file"]'));
       if (flowInputs.length === 0) {
-        const maxWaitMs = 8000;
+        const maxWaitMs = _isNewFlowHost() ? 1000 : 8000;
         const pollInterval = 200;
         let waited = 0;
         while (waited < maxWaitMs && flowInputs.length === 0) {
@@ -9561,15 +9831,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           flowInputs = Array.from(document.querySelectorAll('input[type="file"]'));
         }
         if (flowInputs.length === 0) {
-          console.warn('[uploadFilesToFlow] No file input found after ' + maxWaitMs + 'ms wait (Flow React app chưa bootstrap)');
-          return {
-            tileIds: [],
-            orderedTileIds: [],
-            warning: 'No file input found after wait',
-            errorCode: 'NO_FLOW_INPUT_AFTER_WAIT',
-          };
+          if (_isNewFlowHost()) {
+            dungKeoTha = true;
+            console.log('[uploadFilesToFlow] Không có input[type=file] (Flow mới dùng File System Access API) → chuyển sang kéo-thả');
+          } else {
+            console.warn('[uploadFilesToFlow] No file input found after ' + maxWaitMs + 'ms wait (Flow React app chưa bootstrap)');
+            return {
+              tileIds: [],
+              orderedTileIds: [],
+              warning: 'No file input found after wait',
+              errorCode: 'NO_FLOW_INPUT_AFTER_WAIT',
+            };
+          }
+        } else {
+          console.log('[uploadFilesToFlow] Found ' + flowInputs.length + ' file input(s) after ' + waited + 'ms wait');
         }
-        console.log('[uploadFilesToFlow] Found ' + flowInputs.length + ' file input(s) after ' + waited + 'ms wait');
       }
 
       const orderedTileIds = [];
@@ -9597,6 +9873,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         if (isVideoFile) {
           await _dropVideoToFlow(file);
+        } else if (dungKeoTha) {
+          // Flow mới: không có input để gán .files → thả ảnh y như cách vẫn làm với video,
+          // chỉ khác là ảnh không kích hoạt modal xác nhận bản quyền.
+          await _dropImageToFlow(file);
         } else {
           // Ảnh: dùng input.files (input image/*). Filter input ảnh, tránh input video-only nếu có.
           const targetInputs = flowInputs.filter((input) => {
@@ -9661,7 +9941,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const newTiles = currentTiles.filter(id => !existingTiles.includes(id) && !orderedTileIds.includes(id));
 
           if (newTiles.length > 0) {
-            const tile = document.querySelector(`[data-tile-id="${newTiles[0]}"]`);
+            const tile = document.querySelector(_tileSel(newTiles[0]));
             if (tile) {
               const status = detectTileStatus(tile);
               if (status === 'success') {
@@ -9679,7 +9959,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   console.log('[uploadFilesToFlow] Retry button clicked, waiting for recovery...');
                   await sleep(2000);
                   // Re-check status sau retry
-                  const retryTile = document.querySelector(`[data-tile-id="${newTiles[0]}"]`);
+                  const retryTile = document.querySelector(_tileSel(newTiles[0]));
                   const retryStatus = detectTileStatus(retryTile);
                   if (retryStatus === 'success') {
                     console.log('[uploadFilesToFlow] Tile recovered after retry:', newTiles[0]);
@@ -9707,7 +9987,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   });
                   await sleep(2000); // Chờ React resume
                   // Re-check tile status sau khi activate
-                  const reCheckTile = document.querySelector(`[data-tile-id="${processingTileId}"]`);
+                  const reCheckTile = document.querySelector(_tileSel(processingTileId));
                   const reCheckStatus = detectTileStatus(reCheckTile);
                   if (reCheckStatus === 'success') {
                     console.log('[uploadFilesToFlow] Tab activated, tile now success:', processingTileId);
@@ -9718,7 +9998,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const retryClicked = clickUploadRetryButton(processingTileId);
                     if (retryClicked) {
                       await sleep(2000);
-                      const retryTile = document.querySelector(`[data-tile-id="${processingTileId}"]`);
+                      const retryTile = document.querySelector(_tileSel(processingTileId));
                       const retryStatus = detectTileStatus(retryTile);
                       if (retryStatus === 'success') {
                         console.log('[uploadFilesToFlow] Tile recovered after retry:', processingTileId);
@@ -9731,7 +10011,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   // Still processing after activate → wait thêm 5s rồi timeout
                   console.log('[uploadFilesToFlow] Tab activated but tile still processing, waiting 5s more...');
                   await sleep(5000);
-                  const finalTile = document.querySelector(`[data-tile-id="${processingTileId}"]`);
+                  const finalTile = document.querySelector(_tileSel(processingTileId));
                   const finalStatus = detectTileStatus(finalTile);
                   if (finalStatus === 'success') {
                     newTileId = processingTileId;
@@ -9754,13 +10034,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Processing tile không dùng được cho addFileToPrompt → sẽ gây lỗi
         if (!newTileId && processingTileId) {
           console.warn('[uploadFilesToFlow] Timeout: tile still processing, NOT accepting:', processingTileId);
-          // KHÔNG set newTileId = processingTileId để tránh submit fail
+          // Chẩn đoán: in ra đúng những gì thấy được ở tile đó. Trên Flow mới, tiêu chí
+          // "xong" là src đã trỏ CDN /asb/; nếu Flow phục vụ ảnh tải lên bằng đường dẫn
+          // khác thì tile sẽ kẹt 'processing' mãi mà không có cách nào biết tại sao.
+          try {
+            const tEl = _getTileById(processingTileId);
+            const mEl = tEl && (_q('tile_image', tEl) || _selfOrDescendant(tEl, 'img, video'));
+            console.warn('[uploadFilesToFlow] CHẨN ĐOÁN tile kẹt:', {
+              timThayTile: !!tEl,
+              theTile: tEl?.tagName || null,
+              classTile: tEl?.className || null,
+              timThayMedia: !!mEl,
+              theMedia: mEl?.tagName || null,
+              src: (mEl?.src || mEl?.getAttribute?.('src') || '').slice(0, 130) || null,
+              patternDangSoSanh: _getMediaUrlPattern(),
+              htmlTile: (tEl?.outerHTML || '').slice(0, 320) || null,
+            });
+          } catch (e) {
+            console.warn('[uploadFilesToFlow] Không lấy được chẩn đoán:', e?.message);
+          }
+
+          // Flow mới: data-media-id là UUID do SERVER cấp — Flow chỉ gán sau khi đã
+          // nhận file, nên tới được đây nghĩa là upload đã thành công, chỉ là ảnh vẫn
+          // đang hiển thị bằng blob: cục bộ chờ CDN. Từ chối thẳng tay sẽ vứt bỏ một
+          // lần upload đã thành công. Nhận, nhưng ghi log rõ để biết đã đi nhánh này.
+          if (_isNewFlowHost()) {
+            try {
+              const tEl = _getTileById(processingTileId);
+              const mEl = tEl && (_q('tile_image', tEl) || _selfOrDescendant(tEl, 'img, video'));
+              const src = mEl?.src || '';
+              const dungDuoc = !!src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('blob:'));
+              if (dungDuoc) {
+                console.warn('[uploadFilesToFlow] Flow mới: chấp nhận tile dù chưa lên CDN (đã có UUID từ server + ảnh xem trước):', processingTileId);
+                newTileId = processingTileId;
+              }
+            } catch (_) { /* giữ nguyên hành vi từ chối nếu không đọc được */ }
+          }
         }
 
         if (newTileId) {
           orderedTileIds.push(newTileId);
           const tile = _getTileById(newTileId);
-          const media = tile?.querySelector('img, video');
+          // _selfOrDescendant: trên Flow mới tile chính là <img> nên querySelector bỏ sót nó.
+          const media = tile ? _selfOrDescendant(tile, 'img, video') : null;
 
           // CRITICAL: Chờ file_name + thumbnailUrl có sẵn (img src chứa getMediaUrlRedirect)
           // Nếu tile processing, src có thể là blob/placeholder → extractFileName null + thumbnailUrl sai
@@ -9775,11 +10091,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             for (let fnWait = 0; fnWait < 5000 && (!fileName || !isValidThumbUrl(thumbnailUrl)); fnWait += 500) {
               await sleep(500);
               // Force refresh cache
-              const tileId = tile.dataset?.tileId;
+              const tileId = _tileIdOf(tile);
               if (tileId) _fileNameCache.delete(tileId);
               fileName = extractFileName(tile);
               // Re-query media element và lấy src mới
-              const freshMedia = tile.querySelector('img, video');
+              const freshMedia = _selfOrDescendant(tile, 'img, video');
               if (freshMedia?.src) thumbnailUrl = freshMedia.src;
             }
             if (fileName) {
@@ -9851,7 +10167,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // local) lẫn `lh3.googleusercontent.com` (tile gen từ Flow). Trước fix chỉ accept lh3
       // → tile upload local trả thumbnailUrl=null → _taskTileCache giữ data:URL local →
       // task save với data URL → reuploadMissingFiles Tầng 3 CDN fetch fail (data URL không fetch được).
-      const img = tile.querySelector('img');
+      const img = _selfOrDescendant(tile, 'img');
       const src = img?.src || '';
       const thumbnailUrl = (src && (src.startsWith('http://') || src.startsWith('https://'))
         && !src.startsWith('data:') && !src.startsWith('chrome-extension:'))
@@ -10343,7 +10659,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     'detectTileStatus': () => {
       // Kiểm tra trạng thái tile qua DOM
-      const tile = document.querySelector(`[data-tile-id="${message.tileId}"]`);
+      const tile = document.querySelector(_tileSel(message.tileId));
       return { status: detectTileStatus(tile) };
     },
 
@@ -10467,7 +10783,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         let pending = 0;
         for (const tile of tiles) {
           // Bỏ tile đã claim bởi monitor khác → tránh monitor A "kẹt chờ" gen của B.
-          const tid = tile.dataset?.tileId;
+          const tid = _tileIdOf(tile);
           if (tid && excludeSet.has(tid)) continue;
           // Quick reject: tile có media với http/https/blob src → likely success → skip
           const media = tile.querySelector('video[src^="http"], video[src^="blob:"], img[src^="http"], img[src^="blob:"]');
@@ -10543,7 +10859,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // [REVERT ] Bỏ state detection vì editLink check không reliable
       // (tile cũ không generated cũng không có edit link → false 'processing').
       for (const tile of allTiles) {
-        const tileId = tile.dataset.tileId;
+        const tileId = _tileIdOf(tile);
         if (!tileId) continue;
 
         // FIX: Skip duplicate tile IDs trong cùng scan

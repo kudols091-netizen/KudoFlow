@@ -182,12 +182,20 @@ module.exports = async function providerRoutes(fastify) {
         flow: {
           name: 'Google Flow',
           status: 'active',
-          base_url: 'https://labs.google/fx/tools/flow',
-          config_version: 6,
+          // 2026-09: Google chuyển Flow từ labs.google/fx (React) sang flow.google.com
+          // (Angular). URL cũ trả 308 redirect. Toàn bộ selector bên dưới đã cập nhật
+          // theo DOM mới, kiểm chứng trực tiếp trên trang thật.
+          base_url: 'https://flow.google.com/',
+          // PHẢI tăng mỗi lần đổi config: ConfigVersionPoller ở extension so sánh số này
+          // để xoá cache và tải lại. Không tăng thì client giữ cache cũ tới 4 tiếng.
+          config_version: 7,
           selectors: {
-            // Slate.js rich text editor for prompts
+            // Ô nhập prompt. Flow cũ (React) dùng Slate.js; Flow mới (Angular) dùng
+            // ProseMirror — xác minh qua log: drop target là `div.ProseMirror[contenteditable]`.
+            // Giữ selector Slate ở đầu cho bản cũ, ProseMirror trước `div[contenteditable]`
+            // chung chung để chọn đúng editor thay vì khớp tình cờ một div bất kỳ.
             slate_editor: {
-              selectors: ['[data-slate-editor="true"]', 'div[contenteditable="true"][data-slate-editor]', 'div[contenteditable="true"]'],
+              selectors: ['[data-slate-editor="true"]', 'div[contenteditable="true"][data-slate-editor]', 'div.ProseMirror[contenteditable="true"]', '.ProseMirror', 'div[contenteditable="true"]'],
               text_match: null, attribute: null, icon_text: null, button_text: null,
             },
             // Submit/Generate button — found by Material Symbol icon text 'arrow_forward'
@@ -204,10 +212,13 @@ module.exports = async function providerRoutes(fastify) {
               selectors: ['button[aria-label="Settings"]', 'button[aria-label="Image settings"]'],
               text_match: null, attribute: null, icon_text: 'tune', button_text: null,
             },
-            // Generated image tile container
+            // Khối chứa media. Flow mới đổi `data-tile-id` thành `data-media-id`, và
+            // thuộc tính này nằm NGAY TRÊN thẻ <img> chứ không phải div bao ngoài.
+            // Kiểm chứng: tìm `data-tile-id` trong DOM Flow mới ra 0 kết quả.
+            // Giữ `data-tile-id` cuối danh sách cho bản Flow cũ (nếu còn đâu đó).
             tile_container: {
-              selectors: ['[data-tile-id]', 'div[data-tile-id]', 'li[data-tile-id]'],
-              text_match: null, attribute: 'data-tile-id', icon_text: null, button_text: null,
+              selectors: ['[data-media-id]', 'img[data-media-id]', '[data-tile-id]'],
+              text_match: null, attribute: 'data-media-id', icon_text: null, button_text: null,
             },
             // Material Symbols icon element selector
             icon_element: {
@@ -636,8 +647,10 @@ module.exports = async function providerRoutes(fastify) {
               image_fallback_chain: ['original', '4K', '2K', '1K'],
               video_fallback_chain: ['1080p', '720p'],
             },
+            // Flow mới phục vụ media qua https://flow.google.com/asb/<token>=s512-rw.
+            // Chuỗi 'getMediaUrlRedirect' của bản cũ không còn xuất hiện.
             image_url_pattern: {
-              url_substring: 'getMediaUrlRedirect',
+              url_substring: 'flow.google.com/asb/',
             },
             max_ref_images: { image: 5, video_ingredients: 10 },
             video_durations: {
@@ -655,13 +668,16 @@ module.exports = async function providerRoutes(fastify) {
               image_mode: true,
             },
             quantity_range: { min: 1, max: 4 },
+            // LƯU Ý match pattern Chrome: dạng <scheme>://<host><path>, BẮT BUỘC có path.
+            // 'https://flow.google.com' (thiếu dấu / cuối) là pattern không hợp lệ và sẽ
+            // làm chrome.tabs.query ném lỗi, huỷ luôn cả mảng.
             urls: {
-              base: 'https://labs.google/fx/tools/flow',
-              tab_query: 'https://labs.google/fx/*',
-              tab_query_patterns: ['https://labs.google/fx/*'],
-              create_url: 'https://labs.google/fx/tools/flow',
-              locale_base: 'https://labs.google/fx',
-              cdn_patterns: ['googleusercontent.com', 'storage.googleapis.com'],
+              base: 'https://flow.google.com/',
+              tab_query: 'https://flow.google.com/*',
+              tab_query_patterns: ['https://flow.google.com/*', 'https://labs.google/fx/*'],
+              create_url: 'https://flow.google.com/',
+              locale_base: 'https://flow.google.com',
+              cdn_patterns: ['flow.google.com/asb/', 'googleusercontent.com', 'storage.googleapis.com'],
             },
           },
         },

@@ -31,7 +31,14 @@ class ProviderConfigManager {
   // 2. Detect provider tabs (tabQuery pattern)
   // Các URLs chi tiết (createUrl, localeBase, cdnPatterns) lấy từ server.
   static _BOOTSTRAP_URLS = {
-    flow: { base: 'https://labs.google/fx/tools/flow', tabQuery: 'https://labs.google/fx/*' },
+    // 2026-09: Google chuyển Flow từ labs.google/fx/tools/flow sang flow.google.com
+    // (URL cũ trả 308 → https://flow.google.com/). Giữ labs.google trong patterns để
+    // tab cũ chưa redirect vẫn được nhận diện.
+    flow: {
+      base: 'https://flow.google.com/',
+      tabQuery: 'https://flow.google.com/*',
+      tabQueryPatterns: ['https://flow.google.com/*', 'https://labs.google/fx/*'],
+    },
     chatgpt: { base: 'https://chatgpt.com', tabQuery: '*://chatgpt.com/*' },
     grok: { base: 'https://grok.com', tabQuery: '*://grok.com/*' },
     gemini: { base: 'https://gemini.google.com', tabQuery: '*://gemini.google.com/*' },
@@ -123,7 +130,8 @@ class ProviderConfigManager {
     const data = await this.fetch();
     const remote = data?.[providerSlug];
     // Phase 3: Server-Only — fallback to _BOOTSTRAP_URLS minimal
-    return remote?.base_url || this._BOOTSTRAP_URLS[providerSlug]?.base || '';
+    if (remote?.base_url && !this._isStaleFlowUrl(providerSlug, remote.base_url)) return remote.base_url;
+    return this._BOOTSTRAP_URLS[providerSlug]?.base || '';
   }
 
   /**
@@ -131,8 +139,9 @@ class ProviderConfigManager {
    * Dùng cho hot path không thể await.
    */
   static getBaseUrlSync(providerSlug) {
-    if (this._cache?.data?.[providerSlug]?.base_url) {
-      return this._cache.data[providerSlug].base_url;
+    const cachedBase = this._cache?.data?.[providerSlug]?.base_url;
+    if (cachedBase && !this._isStaleFlowUrl(providerSlug, cachedBase)) {
+      return cachedBase;
     }
     // Phase 3: Server-Only — minimal bootstrap only
     return this._BOOTSTRAP_URLS[providerSlug]?.base || '';
@@ -149,9 +158,18 @@ class ProviderConfigManager {
   static getTabQuery(slug) {
     // 1. Server cache (api_configs.urls.tab_query)
     const serverUrl = this._apiConfigsCache?.data?.[slug]?.configs?.urls?.tab_query;
-    if (serverUrl) return serverUrl;
+    if (serverUrl && !this._isStaleFlowUrl(slug, serverUrl)) return serverUrl;
     // 2. _BOOTSTRAP_URLS (minimal bootstrap for offline check)
     return this._BOOTSTRAP_URLS[slug]?.tabQuery || '';
+  }
+
+  /**
+   * 2026-09 Flow domain migration: config trên server có thể còn trỏ labs.google,
+   * domain này đã 308 redirect sang flow.google.com nên không còn match tab nào.
+   * Bỏ qua giá trị server lỗi thời đó và dùng _BOOTSTRAP_URLS thay thế.
+   */
+  static _isStaleFlowUrl(slug, url) {
+    return slug === 'flow' && typeof url === 'string' && /labs\.google/i.test(url);
   }
 
   /**
@@ -161,11 +179,15 @@ class ProviderConfigManager {
    * @returns {string[]} Array patterns
    */
   static getTabQueryPatterns(slug) {
-    // 1. Server cache
+    // 1. Server cache + 2. bootstrap patterns — merge thay vì server-wins, để Flow
+    // vẫn match flow.google.com kể cả khi server config còn trỏ labs.google.
     const serverPatterns = this._apiConfigsCache?.data?.[slug]?.configs?.urls?.tab_query_patterns;
-    if (Array.isArray(serverPatterns) && serverPatterns.length > 0) return serverPatterns;
-    // 2. Derive từ getTabQuery (which falls back to _BOOTSTRAP_URLS)
-    return [this.getTabQuery(slug)].filter(Boolean);
+    const merged = [
+      ...(Array.isArray(serverPatterns) ? serverPatterns : []),
+      ...(this._BOOTSTRAP_URLS[slug]?.tabQueryPatterns || []),
+      this.getTabQuery(slug),
+    ].filter(Boolean);
+    return [...new Set(merged)];
   }
 
   /**
@@ -177,7 +199,7 @@ class ProviderConfigManager {
   static getCreateUrl(slug) {
     // 1. Server cache
     const serverUrl = this._apiConfigsCache?.data?.[slug]?.configs?.urls?.create_url;
-    if (serverUrl) return serverUrl;
+    if (serverUrl && !this._isStaleFlowUrl(slug, serverUrl)) return serverUrl;
     // 2. _BOOTSTRAP_URLS base (minimal)
     return this._BOOTSTRAP_URLS[slug]?.base || this.getBaseUrlSync(slug);
   }

@@ -309,7 +309,7 @@ class SidebarManager {
     const checkFlowTabExists = async () => {
       try {
         // Check if ANY Flow tab exists (not just the current tab)
-        const flowTabs = await chrome.tabs.query({ url: window.ProviderConfigManager?.getTabQuery('flow') || 'https://labs.google/fx/*' });
+        const flowTabs = await chrome.tabs.query({ url: window.ProviderConfigManager?.getTabQueryPatterns?.('flow') || ['https://flow.google.com/*', 'https://labs.google/fx/*'] });
         const hasFlowTab = flowTabs.length > 0;
         SidebarManager._toggleFlowOverlay(!hasFlowTab);
       } catch (e) {
@@ -344,7 +344,7 @@ class SidebarManager {
             <line x1="10" y1="14" x2="21" y2="3"></line>
           </svg>
           <p style="margin: 12px 0 4px; font-weight: 600;">${t('app.noFlowTabTitle', 'Google Flow tab not open')}</p>
-          <p style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 16px;">${t('app.noFlowTabDesc', 'Please open a Google Flow tab (labs.google/fx) for the extension to work')}</p>
+          <p style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 16px;">${t('app.noFlowTabDesc', 'Please open a Google Flow tab (flow.google.com) for the extension to work')}</p>
           <button class="btn btn-primary btn-sm" id="goToFlowBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             ${t('app.openFlowTab', 'Open Google Flow')}
@@ -356,8 +356,8 @@ class SidebarManager {
         // [Fix] Reuse existing Flow tab instead of opening new one
         chrome.runtime.sendMessage({
           action: 'openOrActivateTab',
-          urlPattern: window.ProviderConfigManager?.getTabQuery('flow') || 'https://labs.google/fx/*',
-          createUrl: window.ProviderConfigManager?.getCreateUrl('flow') || 'https://labs.google/fx/tools/flow',
+          urlPattern: window.ProviderConfigManager?.getTabQueryPatterns?.('flow') || ['https://flow.google.com/*', 'https://labs.google/fx/*'],
+          createUrl: window.ProviderConfigManager?.getCreateUrl('flow') || 'https://flow.google.com/',
           activate: true
         });
       });

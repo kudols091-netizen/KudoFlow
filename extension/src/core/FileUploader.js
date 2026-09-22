@@ -835,7 +835,7 @@
             // MediaRegistry: centralized cache
             // Bug fix: Chỉ fallback về old thumbnail nếu đó là Flow URL (googleusercontent/labs.google)
             // KHÔNG fallback về server URL (api.kudoskill.xyz) vì đó là URL cũ từ import key
-            const isFlowThumbnailUrl = (url) => url && (url.includes('googleusercontent.com') || url.includes('labs.google'));
+            const isFlowThumbnailUrl = (url) => url && (url.includes('googleusercontent.com') || url.includes('labs.google') || url.includes('flow.google.com'));
             if (reupDetail?.thumbnailUrl && isFlowThumbnailUrl(reupDetail.thumbnailUrl)) {
               MediaRegistry.setThumb(newId, reupDetail.thumbnailUrl);
             } else {

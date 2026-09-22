@@ -1138,7 +1138,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       if (!chrome.tabs?.query) { console.warn('[FlowMultiTabWarning] chrome.tabs.query unavailable'); return; }
       // Query rộng hơn để catch tất cả Flow URLs (homepage / project / tools)
-      const tabs = await chrome.tabs.query({ url: ['https://labs.google/fx/*', 'https://labs.google/fx'] });
+      // LƯU Ý match pattern: dạng <scheme>://<host><path> BẮT BUỘC có phần path.
+      // 'https://flow.google.com' (thiếu dấu / cuối) là pattern KHÔNG hợp lệ → chrome.tabs.query
+      // ném lỗi và huỷ luôn cả mảng. 'https://labs.google/fx' hợp lệ vì đã có path '/fx'.
+      // 'https://flow.google.com/*' đã bao trùm cả trang chủ nên không cần entry riêng.
+      const tabs = await chrome.tabs.query({ url: ['https://flow.google.com/*', 'https://labs.google/fx/*', 'https://labs.google/fx'] });
       console.log('[FlowMultiTabWarning] Found Flow tabs:', tabs?.map(t => ({ id: t.id, url: t.url, title: t.title })));
       if (!tabs || tabs.length <= 1) { console.log('[FlowMultiTabWarning] Skip — ≤1 tab'); return; }
 
@@ -1234,7 +1238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const row = overlay.querySelector(`[data-tab-row="${tabId}"]`);
           row?.remove();
           // Re-query để verify count thật + auto-close khi ≤1
-          const remaining = await chrome.tabs.query({ url: 'https://labs.google/fx/*' });
+          const remaining = await chrome.tabs.query({ url: ['https://flow.google.com/*', 'https://labs.google/fx/*'] });
           if (!remaining || remaining.length <= 1) closeOverlay();
         } catch (err) {
           console.warn('[FlowMultiTabWarning] Close tab failed:', err?.message);

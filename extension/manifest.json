@@ -4,7 +4,7 @@
   "manifest_version": 3,
   "name": "KudoToolAI - Auto Flow, Auto ChatGPT, Auto Grok & AI Workflow Automation",
   "short_name": "KudoToolAI",
-  "version": "1.1.15",
+  "version": "1.1.17",
   "description": "KudoToolAI - Automate ChatGPT, Grok & Google Flow for AI image/video generation. Batch prompts, smart workflows, auto 2K/4K download.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -15,6 +15,7 @@
   "permissions": ["activeTab", "storage", "unlimitedStorage", "sidePanel", "scripting", "tabs", "downloads", "notifications", "alarms"],
   "host_permissions": [
     "https://labs.google/*",
+    "https://flow.google.com/*",
     "*://chatgpt.com/*",
     "*://gemini.google.com/*",
     "https://grok.com/*",
@@ -56,7 +57,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://labs.google/fx/*"],
+      "matches": ["https://labs.google/fx/*", "https://flow.google.com/*"],
       "js": [
         "content.js"
       ],
@@ -64,10 +65,15 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://labs.google/fx/*"],
+      "matches": ["https://labs.google/fx/*", "https://flow.google.com/*"],
       "js": ["slate-bridge.js"],
       "run_at": "document_idle",
       "world": "MAIN"
+    },
+    {
+      "matches": ["https://labs.google/fx/*", "https://flow.google.com/*"],
+      "js": ["flow-launcher.js"],
+      "run_at": "document_idle"
     },
     {
       "matches": ["*://api.kudoskill.xyz/auth/google/success*"],
@@ -111,7 +117,7 @@
         "lib/*.js",
         "lib/*.css"
       ],
-      "matches": ["https://labs.google/*"]
+      "matches": ["https://labs.google/*", "https://flow.google.com/*"]
     }
   ]
 }

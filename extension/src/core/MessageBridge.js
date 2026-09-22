@@ -16,6 +16,21 @@ class MessageBridge {
   // khi 2+ image nodes chạy parallel cùng poll DOM tile mới (Bug 59: 2 image upload → cùng fe_id)
   static _uploadFlowQueue = Promise.resolve();
 
+  // 2026-09: Google chuyển Flow sang flow.google.com (labs.google/fx trả 308).
+  // Nhận cả 2 domain để tab cũ chưa redirect vẫn hoạt động.
+  static _FLOW_URL_REGEX = /^https:\/\/(flow\.google\.com|labs\.google\/fx)(\/|$)/;
+
+  /**
+   * Check URL có phải trang Google Flow không (cả domain cũ lẫn mới).
+   * Thay cho `tab.url.startsWith(_DEFAULT_URLS.flow.base)` — `_DEFAULT_URLS` đã bị
+   * xoá khỏi ProviderConfigManager nên check cũ luôn rơi vào fallback hardcode.
+   * @param {string} url
+   * @returns {boolean}
+   */
+  static _isFlowUrl(url) {
+    return !!url && this._FLOW_URL_REGEX.test(url);
+  }
+
   /**
    * Lấy inputTimeoutMs từ storage để dùng cho retry delays
    * @returns {Promise<number>} inputTimeoutMs (default 1200)
@@ -40,8 +55,7 @@ class MessageBridge {
       // Verify tab vẫn tồn tại và là Flow tab
       try {
         const tab = await chrome.tabs.get(window._targetFlowTabId);
-        const flowBase = window.ProviderConfigManager?._DEFAULT_URLS?.flow?.base || 'https://labs.google/fx';
-        if (tab?.url?.startsWith(flowBase)) {
+        if (this._isFlowUrl(tab?.url)) {
           return window._targetFlowTabId;
         }
       } catch (e) {
@@ -55,8 +69,7 @@ class MessageBridge {
       const result = await chrome.storage?.session?.get('targetFlowTabId');
       if (result?.targetFlowTabId) {
         const tab = await chrome.tabs.get(result.targetFlowTabId).catch(() => null);
-        const flowBase2 = window.ProviderConfigManager?._DEFAULT_URLS?.flow?.base || 'https://labs.google/fx';
-        if (tab?.url?.startsWith(flowBase2)) {
+        if (this._isFlowUrl(tab?.url)) {
           return result.targetFlowTabId;
         }
       }
@@ -88,7 +101,7 @@ class MessageBridge {
     try {
       // Tìm bất kỳ tab labs.google/fx nào (không giới hạn currentWindow
       // vì có thể gọi từ popup window như workflow editor)
-      const tabs = await chrome.tabs.query({ url: window.ProviderConfigManager?.getTabQuery('flow') || 'https://labs.google/fx/*' });
+      const tabs = await chrome.tabs.query({ url: window.ProviderConfigManager?.getTabQueryPatterns?.('flow') || ['https://flow.google.com/*', 'https://labs.google/fx/*'] });
       if (tabs.length === 0) {
         // Show warning modal once (debounce)
         this._showNoFlowTabWarning();
@@ -188,8 +201,7 @@ class MessageBridge {
     try {
       const tab = await chrome.tabs.get(tabId).catch(() => null);
       // Verify tab is a Flow page before inject
-      const flowBaseUrl = window.ProviderConfigManager?._DEFAULT_URLS?.flow?.base || 'https://labs.google/fx';
-      if (!tab || !tab.url?.startsWith(flowBaseUrl)) {
+      if (!tab || !this._isFlowUrl(tab.url)) {
         throw new Error(`Tab ${tabId} không phải Google Flow (url: ${tab?.url || 'N/A'})`);
       }
 
@@ -255,14 +267,14 @@ class MessageBridge {
 
     if (window.customDialog) {
       window.customDialog.alert(
-        window.I18n?.t('msg.openFlowTabDesc') || 'Vui lòng mở tab Google Flow (labs.google/fx) trước khi thực hiện thao tác này.\n\nExtension cần kết nối với trang Google Flow để hoạt động.',
+        window.I18n?.t('msg.openFlowTabDesc') || 'Vui lòng mở tab Google Flow (flow.google.com) trước khi thực hiện thao tác này.\n\nExtension cần kết nối với trang Google Flow để hoạt động.',
         { title: window.I18n?.t('msg.noFlowTabTitle') || 'Không tìm thấy Google Flow', type: 'warning' }
       ).then(() => {
         // [Fix] Reuse existing Flow tab instead of opening new one
         chrome.runtime.sendMessage({
           action: 'openOrActivateTab',
-          urlPattern: window.ProviderConfigManager?.getTabQuery('flow') || 'https://labs.google/fx/*',
-          createUrl: window.ProviderConfigManager?.getCreateUrl('flow') || 'https://labs.google/fx/tools/flow',
+          urlPattern: window.ProviderConfigManager?.getTabQueryPatterns?.('flow') || ['https://flow.google.com/*', 'https://labs.google/fx/*'],
+          createUrl: window.ProviderConfigManager?.getCreateUrl('flow') || 'https://flow.google.com/',
           activate: true
         });
       });
@@ -618,8 +630,8 @@ class MessageBridge {
    * user click Resync từ settings.html mà chưa mở Flow tab).
    */
   static async _ensureFlowTabReadyForScrape() {
-    const flowUrlPattern = window.ProviderConfigManager?.getTabQuery?.('flow') || 'https://labs.google/fx/*';
-    const flowCreateUrl = 'https://labs.google/fx/tools/flow';
+    const flowUrlPattern = window.ProviderConfigManager?.getTabQueryPatterns?.('flow') || ['https://flow.google.com/*', 'https://labs.google/fx/*'];
+    const flowCreateUrl = window.ProviderConfigManager?.getCreateUrl?.('flow') || 'https://flow.google.com/';
 
     // 1. Check Flow tab exists
     let tabs;
