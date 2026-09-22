@@ -10,6 +10,23 @@
  * - Local usage tracking cho anonymous (server không track usage cho anonymous)
  */
 class FeatureGate {
+  // ───────────────────────────────────────────────────────────────────────────
+  // BẢN DÙNG NỘI BỘ (2026-09)
+  //
+  // KudoSkill chuyển từ bán hàng sang dùng nội bộ trong mạng lưới văn phòng.
+  // Không còn gói cước, không còn phân biệt free/pro — mọi bản tải về đều mở
+  // toàn bộ tính năng ở mức cao nhất.
+  //
+  // Đặt `false` nếu sau này quay lại mô hình bán hàng: toàn bộ cơ chế phân quyền
+  // theo gói vẫn nguyên vẹn bên dưới, chỉ cần tắt công tắc này là hoạt động lại.
+  //
+  // Vì sao xử lý ở tầng client thay vì sửa /entitlements trên server:
+  //   1. Sửa server phải deploy, mà Railway đã hết hạn trial nên đang chặn deploy.
+  //   2. Quan trọng hơn: làm ở client thì extension vẫn mở đủ tính năng KỂ CẢ khi
+  //      server chết. Với dùng nội bộ, không có lý do gì để một sự cố hạ tầng
+  //      khoá tính năng của cả văn phòng.
+  static BAN_NOI_BO = true;
+
   constructor() {
     this.cacheKey = 'af_entitlements';
     this.cacheTTL = 30 * 60 * 1000; // [Phase 5 2026-05-24] 30 phút — ConfigVersionPoller detect entitlements_changed (Mercure SSE realtime + /config/versions safety net)
@@ -568,6 +585,9 @@ class FeatureGate {
    * Quota features: true nếu chưa hết quota (merge server limit + local usage cho anonymous)
    */
   canUse(featureKey) {
+    // Bản nội bộ: mọi tính năng đều mở, không hỏi server, không cần đăng nhập.
+    if (FeatureGate.BAN_NOI_BO) return true;
+
     // Auto-refresh nếu cache quá cũ (background, không block)
     // [Fix race-on-reload] Chỉ trigger auto-refresh khi AuthManager đã init xong.
     // Nếu chưa: skip refresh để tránh bắn anonymous fetch sớm rồi overwrite Pro data
@@ -608,6 +628,12 @@ class FeatureGate {
    * @returns {{ allowed: boolean, used: number, limit: number|string }}
    */
   checkQuota(featureKey) {
+    // Bản nội bộ: không giới hạn số lượt. Trả 'unlimited' để mọi chỗ hiển thị
+    // hạn mức đều hiện "Không giới hạn" thay vì một con số.
+    if (FeatureGate.BAN_NOI_BO) {
+      return { allowed: true, used: 0, limit: 'unlimited', remaining: 'unlimited' };
+    }
+
     // Auto-refresh nếu cache quá cũ (background, không block)
     // [Fix A] Chỉ guard bằng _refreshPending + _isLoggingOut. KHÔNG dùng _refreshPromise
     // vì nếu fetch timeout (15s) hoặc SW terminate, _refreshPromise CÓ THỂ stuck pending
@@ -679,6 +705,10 @@ class FeatureGate {
    * Async version - đảm bảo data mới nhất trước khi check quota
    */
   async checkQuotaAsync(featureKey) {
+    // Bản nội bộ: bỏ luôn bước refresh từ server — không có gì để hỏi, và tránh
+    // treo chờ mạng trước mỗi lần chạy.
+    if (FeatureGate.BAN_NOI_BO) return this.checkQuota(featureKey);
+
     if (!this._isCacheValid()) {
       await this.refresh();
     }
@@ -1584,6 +1614,11 @@ class FeatureGate {
    * @returns {{ shouldWarn: boolean, exhausted: boolean, remaining: number, limit: number|string }}
    */
   checkGlobalQuotaWarning(module = 'Generate') {
+    // Bản nội bộ: không có hạn mức chung, nên không bao giờ cảnh báo hay chặn.
+    if (FeatureGate.BAN_NOI_BO) {
+      return { shouldWarn: false, exhausted: false, remaining: 'unlimited', limit: 'unlimited' };
+    }
+
     const limit = this.getGlobalLimit();
     const remaining = this.getGlobalRemaining();
 

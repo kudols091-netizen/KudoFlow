@@ -215,6 +215,23 @@ class ExecutionGate {
     };
 
     const featureKey = featureKeyMap[action];
+
+    // 2026-09 — Bản dùng nội bộ: không có hạn mức nên không cần hỏi server.
+    // Nếu không có nhánh này, toàn bộ logic fail-closed bên dưới sẽ TỪ CHỐI chạy
+    // mỗi khi server không phản hồi (cache quá 60 giây). Với mô hình bán hàng thì
+    // đúng — chặn gian lận hạn mức. Với dùng nội bộ thì vô lý: một sự cố hạ tầng
+    // sẽ khoá tính năng của cả văn phòng.
+    if (window.FeatureGate?.BAN_NOI_BO) {
+      return {
+        allowed: true,
+        token: 'noi-bo-' + Date.now(),
+        remaining: 'unlimited',
+        limit: 'unlimited',
+        prompt_count: promptCount,
+        reason: 'INTERNAL_BUILD',
+      };
+    }
+
     // [Audit Bug 4 fix] 60s = jitter window cho transient blip (DNS, single failed packet).
     // Trước fix: 1h → user offline cả tiếng vẫn pass → drift quota nghiêm trọng.
     const OFFLINE_CACHE_TTL = 60 * 1000; // 60s - chỉ cover jitter, không cover offline thật
@@ -466,6 +483,26 @@ class ExecutionGate {
       // QUOTA_EXCEEDED cho module chỉ xảy ra khi remaining < 1 (hết lượt hoàn toàn)
       const limit = gate.limit ?? '?';
       const used = gate.used ?? '?';
+
+      // 2026-09: hạn mức = 0 KHÔNG phải "đã dùng hết" mà là "gói không có tính năng này".
+      // Câu cũ hiện "Đã hết lượt sử dụng ChatGPT hôm nay / Giới hạn: 0 / Đã dùng: 0" —
+      // người dùng đọc xong tưởng mình đã xài hết, rồi chờ sang ngày mai cho reset.
+      // Thực tế chờ bao lâu cũng vô ích vì hạn mức vốn bằng 0.
+      if (limit === 0) {
+        Dialog.alert(
+          (window.I18n?.t('gate.notInPlanMsg', { moduleName: moduleName || '' })
+            || `Gói hiện tại không bao gồm${moduleName ? ' ' + moduleName : ' tính năng này'}.`) + '\n\n' +
+          (showUpgrade
+            ? (window.I18n?.t('gate.notInPlanUpgrade') || 'Nâng cấp gói để sử dụng.')
+            : (window.I18n?.t('gate.notInPlanContact') || 'Liên hệ admin để mở tính năng này cho tài khoản của bạn.')),
+          {
+            title: window.I18n?.t('gate.notInPlanTitle') || 'Tính năng không có trong gói',
+            type: 'warning',
+            buttons: buildButtons(),
+          }
+        );
+        return;
+      }
 
       const title = window.I18n?.t('gate.usageLimitTitle') || 'Hết lượt sử dụng';
       const message = (window.I18n?.t('gate.usageLimitMsg', { moduleName: moduleName || '', limit, used }) || `Đã hết lượt sử dụng${moduleName ? ' ' + moduleName : ''} hôm nay.\n\nGiới hạn: ${limit} lượt/ngày\nĐã dùng: ${used} lượt`) + '\n\n' +

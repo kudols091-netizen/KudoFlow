@@ -17,7 +17,7 @@ self.__kudotoolaiContentJsLoaded__ = true;
 // In ngay khi content script nạp xong. Mục đích: biết chắc tab đang chạy bản code nào.
 // Sau khi sửa file mà quên reload extension / quên F5, trang vẫn giữ bản cũ và log sẽ
 // gây hiểu nhầm — đối chiếu dòng này là cách nhanh nhất để loại trừ khả năng đó.
-var KUDO_BUILD = '1.1.18-flow-angular (2026-09-22)';
+var KUDO_BUILD = '1.2.0-noi-bo (2026-09-22)';
 console.log('%c[KudoToolAI] build ' + KUDO_BUILD, 'background:#3b82f6;color:#fff;padding:2px 6px;border-radius:3px');
 
 // Guard: var allows safe re-declaration when extension reloads and re-injects content.js
