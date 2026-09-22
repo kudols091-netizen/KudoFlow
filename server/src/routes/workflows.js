@@ -387,6 +387,156 @@ module.exports = async function workflowRoutes(fastify) {
     return { success: true, workflow };
   });
 
+  // ===== EXECUTION PLAN =====
+  //
+  // 2026-09: ba endpoint dưới đây trước giờ KHÔNG tồn tại, trong khi extension bắt
+  // buộc phải gọi được chúng mới chạy workflow. Hệ quả: bấm Run thì chỉ thấy
+  // "Workflow saved" rồi im lặng, vì WorkflowExecutor nhận 404 và tự chặn:
+  //   [WorkflowExecutor] Server plan unavailable, blocking execution: httpStatus 404
+  //
+  // Extension gọi POST /workflows/:wfId/execute và mong nhận về:
+  //   { plan: { execution_id, steps[], total_steps, level_count,
+  //             is_mixed_providers, cycle_detected, unreachable_node_ids,
+  //             applied_settings },
+  //     prompt_count }
+  // Mỗi step cần { node_id, level_index }. Extension gom step theo level_index
+  // thành từng đợt và chạy song song trong cùng một đợt
+  // (xem WorkflowExecutor._convertServerPlanToLevels).
+
+  /**
+   * Sắp xếp topo theo thuật toán Kahn — chia node thành các tầng thực thi.
+   * Node cùng tầng không phụ thuộc nhau nên chạy song song được.
+   * @param {Array} nodes - node đã lọc (bỏ start/note/disabled)
+   * @param {Array} edges - cạnh của workflow
+   * @returns {{levels: string[][], unreachable: string[]}}
+   */
+  function xepTang(nodes, edges) {
+    const hopLe = new Set(nodes.map(n => String(n.node_id)));
+    const bacVao = new Map();
+    const keSau = new Map();
+    for (const id of hopLe) { bacVao.set(id, 0); keSau.set(id, []); }
+
+    for (const e of edges) {
+      const tu = String(e.source_node_id ?? '');
+      const den = String(e.target_node_id ?? '');
+      // Bỏ qua cạnh trỏ tới node đã bị lọc (start/note/disabled) hoặc cạnh tự trỏ
+      if (!hopLe.has(tu) || !hopLe.has(den) || tu === den) continue;
+      keSau.get(tu).push(den);
+      bacVao.set(den, bacVao.get(den) + 1);
+    }
+
+    const levels = [];
+    const daXep = new Set();
+    let hienTai = [...hopLe].filter(id => bacVao.get(id) === 0);
+
+    while (hienTai.length > 0) {
+      levels.push(hienTai);
+      hienTai.forEach(id => daXep.add(id));
+      const ke = [];
+      for (const id of levels[levels.length - 1]) {
+        for (const sau of keSau.get(id) || []) {
+          bacVao.set(sau, bacVao.get(sau) - 1);
+          if (bacVao.get(sau) === 0) ke.push(sau);
+        }
+      }
+      hienTai = ke;
+    }
+
+    // Node không bao giờ về bậc 0 → nằm trong một vòng lặp
+    const unreachable = [...hopLe].filter(id => !daXep.has(id));
+    return { levels, unreachable };
+  }
+
+  // POST /workflows/:wfId/execute — trả bản kế hoạch thực thi
+  fastify.post('/workflows/:wfId/execute', { preHandler: authenticate }, async (req, reply) => {
+    const { wfId } = req.params;
+    const row = await queryOne('SELECT * FROM workflows WHERE id = ? AND user_id = ?', [wfId, req.user.id]);
+    if (!row) return reply.code(404).send({ success: false, error: { code: 'NOT_FOUND' } });
+
+    const wf = parseData(row);
+    // start/note không thực thi; node tắt công tắc cũng bỏ qua
+    const nodes = (wf.nodes || []).filter(n => {
+      const t = n.node_type || n.type;
+      if (t === 'start' || t === 'note') return false;
+      return n.enabled !== false;
+    });
+
+    if (nodes.length === 0) {
+      return reply.code(422).send({ success: false, error: { code: 'EMPTY_WORKFLOW' } });
+    }
+
+    const { levels, unreachable } = xepTang(nodes, wf.edges || []);
+
+    const steps = [];
+    levels.forEach((tang, idx) => {
+      for (const nodeId of tang) {
+        const n = nodes.find(x => String(x.node_id) === nodeId);
+        steps.push({
+          node_id: nodeId,
+          level_index: idx,
+          node_type: n?.node_type || n?.type || null,
+          provider: n?.provider || null,
+        });
+      }
+    });
+
+    // Nhiều nhà cung cấp trong một workflow → extension nối tiếp thao tác chuyển tab
+    const providers = new Set();
+    for (const n of nodes) {
+      const t = n.node_type || n.type;
+      if (t === 'generate' || t === 'image') providers.add('flow');
+      else if (t === 'chatgpt') providers.add(n.provider || 'chatgpt');
+      else if (t === 'grok') providers.add('grok');
+      else if (t === 'prompt' && n.use_ai === true) providers.add(n.provider || 'chatgpt');
+    }
+
+    const override = req.body?.settings_override || {};
+    const wfSettings = wf.settings_json || {};
+
+    return {
+      plan: {
+        execution_id: crypto.randomUUID(),
+        steps,
+        total_steps: steps.length,
+        level_count: levels.length,
+        is_mixed_providers: providers.size > 1,
+        providers: [...providers],
+        cycle_detected: unreachable.length > 0,
+        unreachable_node_ids: unreachable,
+        applied_settings: {
+          parallel_execution: override.parallel_execution ?? wfSettings.parallel_execution ?? true,
+          stop_on_error: override.stop_on_error ?? wfSettings.stop_on_error ?? false,
+          max_retries: override.max_retries ?? wfSettings.max_retries ?? 2,
+        },
+      },
+      // Số node thực sự sinh nội dung — dùng để tính hạn mức
+      prompt_count: nodes.filter(n => ['generate', 'chatgpt', 'grok'].includes(n.node_type || n.type)).length,
+    };
+  });
+
+  // POST /execution/request — cấp token cho một lượt chạy.
+  // LƯU Ý đường dẫn số ít `execution/`, khác với nhóm `executions/` bên dưới.
+  // ExecutionGate đọc `data.execution_token`; thiếu token thì nó coi như bị từ chối.
+  fastify.post('/execution/request', { preHandler: authenticate }, async (req, reply) => {
+    const { action, prompt_count = 1 } = req.body || {};
+    return reply.send({
+      success: true,
+      data: {
+        execution_token: crypto.randomUUID(),
+        expires_in: 3600,
+        action: action || null,
+        prompt_count,
+        allowed: true,
+        reason: 'SERVER_APPROVED',
+      },
+    });
+  });
+
+  // POST /execution/complete — báo đã dùng xong token
+  fastify.post('/execution/complete', { preHandler: authenticate }, async () => {
+    return { success: true };
+  });
+
   // ===== EXECUTION TRACKING =====
 
   // POST /executions/start
