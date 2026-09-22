@@ -17,7 +17,7 @@ self.__kudotoolaiContentJsLoaded__ = true;
 // In ngay khi content script nạp xong. Mục đích: biết chắc tab đang chạy bản code nào.
 // Sau khi sửa file mà quên reload extension / quên F5, trang vẫn giữ bản cũ và log sẽ
 // gây hiểu nhầm — đối chiếu dòng này là cách nhanh nhất để loại trừ khả năng đó.
-var KUDO_BUILD = '1.2.0-noi-bo (2026-09-22)';
+var KUDO_BUILD = '1.2.1-noi-bo (2026-09-22)';
 console.log('%c[KudoToolAI] build ' + KUDO_BUILD, 'background:#3b82f6;color:#fff;padding:2px 6px;border-radius:3px');
 
 // Guard: var allows safe re-declaration when extension reloads and re-injects content.js
@@ -829,6 +829,20 @@ var _NEW_FLOW_SELECTOR_OVERRIDES = {
   // vào cùng một element. `_q()` đã được sửa để xử lý trường hợp scope chính là kết quả.
   tile_image: {
     selectors: ['img[data-media-id]', 'img'],
+    attribute: null, text_match: null, icon_text: null, button_text: null,
+  },
+  // Ô nhập prompt. Flow cũ (React) dùng Slate.js; Flow mới (Angular) dùng ProseMirror.
+  // Đây KHÔNG phải phỏng đoán: log thật khi thả ảnh ghi rõ drop target là
+  //   [uploadFilesToFlow] image drop dispatched on <div.ProseMirror[contenteditable]>
+  // Đặt ProseMirror TRƯỚC 'div[contenteditable="true"]' chung chung, vì selector
+  // chung đó khớp tình cờ một div bất kỳ chứ không chắc là editor.
+  slate_editor: {
+    selectors: [
+      'div.ProseMirror[contenteditable="true"]',
+      '.ProseMirror[contenteditable="true"]',
+      '.ProseMirror',
+      'div[contenteditable="true"]',
+    ],
     attribute: null, text_match: null, icon_text: null, button_text: null,
   },
 };
@@ -3227,6 +3241,19 @@ function getEditor() {
     }
   }
 
+  // Flow mới: các dấu hiệu ở trên (data-slate-placeholder, icon Material trong container)
+  // đều là của bản React cũ nên không khớp gì cả. Nhưng editor mới nhận ra được chắc
+  // chắn qua class ProseMirror — ưu tiên nó trước khi rơi vào fallback "lấy cái cuối",
+  // vì trang có thể có nhiều div contenteditable khác (ô tìm kiếm, ô đổi tên...).
+  if (_isNewFlowHost()) {
+    const pm = Array.from(allEditors).filter(e => e.classList?.contains('ProseMirror'));
+    if (pm.length > 0) {
+      const chon = pm[pm.length - 1];
+      _logSelectorPick('getEditor', 1, 'prosemirror', chon);
+      return chon;
+    }
+  }
+
   // Fallback: editor cuối cùng (main thường render sau search box, sau onboarding hint, ...)
   if (allEditors.length > 0) {
     const last = allEditors[allEditors.length - 1];
@@ -3376,8 +3403,60 @@ function getSubmitButton() {
     } catch (e) { /* invalid selector */ }
   }
 
-  // Tier 1 (primary): icon match — Flow DOM hiện tại. Server-Only: icon class qua _findIconInElement.
   var buttons = document.querySelectorAll('button');
+
+  // ─── Flow mới (Angular) ───
+  // Các tier bên dưới đều dựa vào đặc trưng của bản React cũ: selector từ config
+  // (aria-label="Generate"), icon Material 'arrow_forward', hoặc chữ trên nút. Flow
+  // mới không có cái nào trong số đó.
+  //
+  // Thay vì đoán tên class — thứ Google đổi mỗi lần build — tìm theo VỊ TRÍ: nút gửi
+  // nằm trong cùng khối với ô nhập prompt. Đi từ editor lên vài cấp cha rồi lấy nút
+  // cuối cùng còn bật trong khối đó.
+  //
+  // Có ghi log chi tiết nút được chọn để đối chiếu, vì đây là suy luận cấu trúc
+  // chứ chưa được xác minh trên DOM thật.
+  if (_isNewFlowHost()) {
+    var ed = null;
+    try { ed = getEditor(); } catch (_) {}
+    if (ed) {
+      var khoi = ed;
+      for (var lv = 0; lv < 6 && khoi; lv++) {
+        khoi = khoi.parentElement;
+        if (!khoi) break;
+        var nut = Array.from(khoi.querySelectorAll('button')).filter(function (b) {
+          if (b.disabled || b.getAttribute('aria-disabled') === 'true') return false;
+          if (b.offsetParent === null) return false;             // đang bị ẩn
+          return (b.textContent || '').trim().length <= 24;      // nút icon, không phải nút chữ dài
+        });
+        if (nut.length === 0) continue;
+
+        // Ưu tiên nút có nhãn trợ năng gợi ý hành động gửi (nhiều ngôn ngữ)
+        var theoNhan = nut.find(function (b) {
+          var nhan = ((b.getAttribute('aria-label') || '') + ' ' + (b.title || '')).toLowerCase();
+          return /generate|submit|send|create|run|tạo|gửi|chạy/.test(nhan);
+        });
+        var chon = theoNhan || nut[nut.length - 1];  // không có nhãn → nút cuối khối
+        console.log('[Selector:submit_button] Flow mới — chọn theo cấu trúc:', {
+          cap_cha: lv + 1,
+          theo_nhan: !!theoNhan,
+          so_nut_trong_khoi: nut.length,
+          the: chon.tagName,
+          aria_label: chon.getAttribute('aria-label'),
+          title: chon.title || null,
+          class: chon.className,
+          chu: (chon.textContent || '').trim().slice(0, 30),
+        });
+        _logSelectorPick('getSubmitButton', 1, 'new-flow-structural', chon);
+        return chon;
+      }
+      console.warn('[Selector:submit_button] Flow mới — không tìm thấy nút nào quanh ô nhập prompt');
+    } else {
+      console.warn('[Selector:submit_button] Flow mới — chưa tìm được ô nhập prompt nên bỏ qua bước tìm theo cấu trúc');
+    }
+  }
+
+  // Tier 1 (primary): icon match — Flow DOM hiện tại. Server-Only: icon class qua _findIconInElement.
   for (var i = 0; i < buttons.length; i++) {
     var btn = buttons[i];
     var icon = _findIconInElement(btn);
