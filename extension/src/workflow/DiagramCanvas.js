@@ -2286,11 +2286,19 @@ class DiagramCanvas {
         items.push({ action: 'force-stop-node', label: t('workflow.forceStop', 'Force stop'), danger: true, icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>' });
       } else {
         items.push({ action: 'run-node', label: t('node.runNode', 'Chạy node'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>' });
+        // 2026-09: "Chạy node" chỉ chạy ĐÚNG node đó. Mục dưới đây reset node này
+        // cùng mọi node phía sau rồi chạy tiếp liền mạch — dùng khi sửa một node
+        // giữa chuỗi và muốn phần còn lại chạy lại theo.
+        items.push({ action: 'run-from-node', label: t('node.runFromNode', 'Chạy từ node này'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 3 12 12 3 21 3 3"/><polygon points="12 3 21 12 12 21 12 3"/></svg>' });
       }
     }
     // EWT-11: Ẩn reset-node khi template mode
     if (hasResults && !isNote && !isTemplateMode) {
       items.push({ action: 'reset-node', label: t('node.resetNode', 'Reset node'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' });
+      // Chỉ hiện khi node THỰC SỰ có node phía sau — tránh trùng chức năng với "Reset node"
+      if (!isStart && this._hasDownstreamNodes(nodeId)) {
+        items.push({ action: 'reset-downstream', label: t('node.resetDownstream', 'Reset node này và các node sau'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/><line x1="9" y1="12" x2="15" y2="12"/></svg>' });
+      }
     }
     if (hasPrompt) {
       items.push({ action: 'copy-prompt', label: t('node.copyPrompt', 'Copy prompt'), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' });
@@ -2358,8 +2366,28 @@ class DiagramCanvas {
   }
 
   /**
+   * Node này có node nào nối phía sau không?
+   * Dùng để chỉ hiện mục "Chạy từ node này" / "Reset ... và các node sau" khi có ý nghĩa.
+   * Drawflow lưu liên kết ở node.outputs[<cổng>].connections[].
+   * @param {string|number} nodeId - Drawflow ID
+   * @returns {boolean}
+   */
+  _hasDownstreamNodes(nodeId) {
+    try {
+      const node = this.editor?.getNodeFromId(nodeId);
+      if (!node?.outputs) return false;
+      return Object.keys(node.outputs).some(
+        (cong) => (node.outputs[cong]?.connections || []).length > 0
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
    * Dispatch node action — dùng chung logic với hover toolbar click handler.
-   * Bao gồm: run-node, reset-node, copy-prompt, branch-node, settings-node, copy-node, delete-node, download-node.
+   * Bao gồm: run-node, run-from-node, reset-node, reset-downstream, copy-prompt,
+   * branch-node, settings-node, copy-node, delete-node, download-node.
    */
   _dispatchNodeAction(action, nodeId) {
     if (!nodeId || !this.editor) return;
@@ -2368,6 +2396,10 @@ class DiagramCanvas {
 
     if (action === 'run-node') {
       window.eventBus?.emit('node:run_single', { nodeId });
+    } else if (action === 'run-from-node') {
+      window.eventBus?.emit('node:run_from', { nodeId });
+    } else if (action === 'reset-downstream') {
+      window.eventBus?.emit('node:reset_downstream', { nodeId });
     } else if (action === 'force-stop-node') {
       window.eventBus?.emit('node:force_stop', { nodeId });
     } else if (action === 'reset-node') {

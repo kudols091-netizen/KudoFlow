@@ -3754,6 +3754,18 @@ class WorkflowEditor {
       this._resetSingleNode(data.nodeId);
     });
 
+    // Reset node này + tất cả node phía sau (context menu)
+    window.eventBus?.on('node:reset_downstream', (data) => {
+      if (!data?.nodeId) return;
+      this._resetNodeAndDownstream(data.nodeId);
+    });
+
+    // Chạy lại từ node này trở đi (context menu) — reset nhánh phía sau rồi chạy tiếp
+    window.eventBus?.on('node:run_from', (data) => {
+      if (!data?.nodeId) return;
+      this._runFromNode(data.nodeId);
+    });
+
     // Force stop từ context menu node (right-click) — dừng thực thi đang chạy (single node hoặc workflow).
     window.eventBus?.on('node:force_stop', () => {
       this._forceStopExecution();
@@ -15824,6 +15836,227 @@ QUY TẮC:
     footerBtn?.classList.toggle('hidden', shouldHide);
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Chạy lại từ một node giữa chuỗi (2026-09)
+  //
+  // Trước đây chỉ có 2 thao tác rời rạc: "Chạy node" (executeSingleNode — chỉ đúng
+  // node đó, KHÔNG chạy tiếp phía sau) và "Reset node" (cũng chỉ một node). Muốn sửa
+  // một node giữa chuỗi rồi chạy lại từ đó, user phải reset thủ công từng node phía
+  // sau rồi mới bấm Run — quên một node là nó giữ kết quả cũ.
+  //
+  // Nhóm hàm dưới đây gom việc đó thành một thao tác.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Dò tất cả node nằm phía sau một node, theo đường nối trên sơ đồ.
+   *
+   * Drawflow lưu liên kết ở `node.outputs[<cổng>].connections[] = { node: '<id>' }`.
+   * Duyệt theo chiều rộng và đánh dấu đã thăm để không lặp vô hạn nếu sơ đồ có vòng.
+   *
+   * @param {string|number} drawflowId - node gốc
+   * @param {boolean} [includeSelf=false] - có tính cả node gốc không
+   * @returns {string[]} danh sách Drawflow ID, thứ tự từ gần tới xa
+   */
+  _collectDownstreamDrawflowIds(drawflowId, includeSelf = false) {
+    const editor = this.diagramCanvas?.editor;
+    if (!editor || !drawflowId) return [];
+
+    const ketQua = [];
+    const daTham = new Set([String(drawflowId)]);
+    const hangDoi = [String(drawflowId)];
+
+    while (hangDoi.length > 0) {
+      const hienTai = hangDoi.shift();
+      let node;
+      try { node = editor.getNodeFromId(hienTai); } catch (_) { continue; }
+      if (!node?.outputs) continue;
+
+      for (const cong of Object.keys(node.outputs)) {
+        const links = node.outputs[cong]?.connections || [];
+        for (const link of links) {
+          const ke = String(link?.node ?? '');
+          if (!ke || daTham.has(ke)) continue;
+          daTham.add(ke);
+          ketQua.push(ke);
+          hangDoi.push(ke);
+        }
+      }
+    }
+
+    return includeSelf ? [String(drawflowId), ...ketQua] : ketQua;
+  }
+
+  /**
+   * Xoá kết quả + trạng thái của MỘT node. Không hỏi xác nhận, không lưu.
+   * Tách ra từ _resetSingleNode() để reset hàng loạt chỉ lưu workflow một lần
+   * thay vì lưu lại sau mỗi node.
+   *
+   * @param {string|number} drawflowId
+   * @returns {{ok: boolean, nodeName?: string, nodeId?: string}}
+   */
+  _resetNodeDataOnly(drawflowId) {
+    const dfNode = this.diagramCanvas?.editor?.getNodeFromId(drawflowId);
+    if (!dfNode?.data) return { ok: false };
+
+    const actualNodeId = dfNode.data.node_id;
+    const nodeName = dfNode.data.node_name || dfNode.data.node_type || 'Node';
+    const node = this.workflow?.nodes?.find(n => String(n.node_id) === String(actualNodeId));
+
+    // Bỏ kết quả cũ khỏi cache tile TRƯỚC khi xoá dữ liệu node
+    const oldResultIds = (dfNode.data.result_file_ids || '').split(',').filter(Boolean);
+    for (const id of oldResultIds) this._tileCache.delete(id);
+
+    const clear = (obj) => {
+      obj.status = 'pending';
+      obj.result_file_ids = '';
+      obj.result_thumbnails = null;
+      obj.result_file_names = null;
+      obj.error_message = '';
+      obj.executed_at = null;
+      if (obj.node_type === 'prompt' || obj.node_type === 'text_extract') {
+        obj.result_text = '';
+        obj.result_source = '';
+        delete obj._extract_failed;
+        delete obj._extract_reason;
+      }
+    };
+
+    clear(dfNode.data);
+    // BẮT BUỘC: ghi ngược vào state nội bộ của Drawflow, nếu không exportWorkflow()
+    // vẫn xuất dữ liệu cũ (status còn 'completed').
+    this.diagramCanvas.editor.updateNodeDataFromId(drawflowId, dfNode.data);
+    if (node) clear(node);
+
+    this._updateNodeStatusUI(actualNodeId, 'pending');
+    this._clearNodePreview(actualNodeId);
+    if (dfNode.data.node_type === 'prompt' || dfNode.data.node_type === 'text_extract') {
+      this._clearPromptNodeResultPreview(actualNodeId);
+    }
+
+    return { ok: true, nodeName, nodeId: actualNodeId };
+  }
+
+  /**
+   * Reset một node cùng toàn bộ node phía sau nó.
+   * @param {string|number} drawflowId
+   * @param {boolean} [boQuaXacNhan=false] - true khi gọi từ _runFromNode (đã hỏi rồi)
+   * @returns {Promise<boolean>} true nếu đã reset
+   */
+  async _resetNodeAndDownstream(drawflowId, boQuaXacNhan = false) {
+    if (this.isTemplateMode || this.isReadOnly()) return false;
+    if (!this.workflow?.wf_id || !drawflowId || !this.diagramCanvas?.editor) return false;
+
+    const danhSach = this._collectDownstreamDrawflowIds(drawflowId, true);
+    if (danhSach.length === 0) return false;
+
+    // Lấy tên để liệt kê trong hộp xác nhận — user cần thấy rõ sắp mất kết quả nào
+    const ten = danhSach.map((id) => {
+      const n = this.diagramCanvas.editor.getNodeFromId(id);
+      return n?.data?.node_name || n?.data?.node_type || 'Node';
+    });
+
+    if (!boQuaXacNhan) {
+      const soSau = danhSach.length - 1;
+      const msg = soSau === 0
+        ? `Reset "${ten[0]}"?\n\nNode này không có node nào phía sau.`
+        : `Reset "${ten[0]}" và ${soSau} node phía sau?\n\n${ten.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n\nKết quả của các node trên sẽ bị xoá.`;
+      const ok = await window.customDialog.confirm(msg, {
+        type: 'warning',
+        title: 'Reset node và các node sau',
+        confirmText: 'Reset',
+        cancelText: window.I18n?.t('common.cancel') || 'Hủy',
+      });
+      if (!ok) return false;
+    }
+
+    if (this._deferredSaveTimer) {
+      clearTimeout(this._deferredSaveTimer);
+      this._deferredSaveTimer = null;
+      this._updatePlayButtonState();
+    }
+
+    let soDaReset = 0;
+    for (const id of danhSach) {
+      if (this._resetNodeDataOnly(id).ok) soDaReset++;
+    }
+
+    // Chờ lần lưu đang chạy (nếu có) rồi lưu một lần cho cả nhóm
+    if (this._isSaving) {
+      const batDau = Date.now();
+      while (this._isSaving && Date.now() - batDau < 5000) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+    await this.saveWorkflow();
+
+    if (String(this.selectedNodeId) === String(drawflowId)) {
+      const resultBody = this.overlay?.querySelector('#nodeResultBody');
+      const dfNode = this.diagramCanvas.editor.getNodeFromId(drawflowId);
+      if (resultBody && dfNode?.data) resultBody.innerHTML = this._renderNodeResultTab(dfNode.data);
+      this._updateDownloadButton();
+      this._updateResetSingleNodeButton();
+    }
+    this._checkAndToggleRunResetButton();
+
+    this._addLogEntry(`Đã reset ${soDaReset} node (từ "${ten[0]}" trở đi).`, 'info');
+    return true;
+  }
+
+  /**
+   * Chạy lại từ một node trở đi: reset node đó + các node phía sau, rồi chạy workflow.
+   *
+   * Không cần cơ chế "chạy từ node X" riêng: execute() vốn đã bỏ qua node có
+   * status 'completed'. Reset đúng nhánh phía sau là đủ để nó chạy tiếp liền mạch,
+   * còn các node phía trước giữ nguyên kết quả.
+   */
+  async _runFromNode(drawflowId) {
+    if (this.isTemplateMode || this.isReadOnly()) return;
+    if (!this.workflow?.wf_id || !drawflowId) return;
+
+    if (this.mode === 'create') {
+      window.customDialog?.alert(
+        window.I18n?.t('workflow.saveBeforeRun') || 'Vui lòng lưu workflow trước khi chạy node.',
+        { type: 'warning' }
+      );
+      return;
+    }
+    if (window.workflowExecutor?.isRunning) {
+      window.customDialog?.alert('Workflow đang chạy. Dừng lại trước khi chạy từ node khác.', { type: 'warning' });
+      return;
+    }
+
+    const danhSach = this._collectDownstreamDrawflowIds(drawflowId, true);
+    const ten = danhSach.map((id) => {
+      const n = this.diagramCanvas.editor.getNodeFromId(id);
+      return n?.data?.node_name || n?.data?.node_type || 'Node';
+    });
+    const soSau = danhSach.length - 1;
+    const msg = soSau === 0
+      ? `Chạy lại "${ten[0]}"?\n\nNode này không có node nào phía sau.`
+      : `Chạy lại từ "${ten[0]}" — gồm ${danhSach.length} node:\n\n${ten.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n\nKết quả hiện tại của các node trên sẽ bị xoá rồi chạy lại. Các node phía trước giữ nguyên.`;
+    const ok = await window.customDialog.confirm(msg, {
+      type: 'warning',
+      title: 'Chạy từ node này',
+      confirmText: 'Chạy',
+      cancelText: window.I18n?.t('common.cancel') || 'Hủy',
+    });
+    if (!ok) return;
+
+    const daReset = await this._resetNodeAndDownstream(drawflowId, true);
+    if (!daReset) return;
+
+    this._addLogEntry(`Bắt đầu chạy từ "${ten[0]}"...`, 'info');
+    try {
+      await window.workflowExecutor.execute(this.workflow.wf_id);
+    } catch (err) {
+      if (err?.code === 'CROSS_CONTEXT_RUNNING') {
+        window.customDialog?.alert(err.message, { type: 'warning' });
+      } else {
+        this._addLogEntry(`Lỗi: ${err.message}`, 'error');
+      }
+    }
+  }
+
   async _resetSingleNode(drawflowId) {
     // Template mode: không cho reset vì workflow chưa tồn tại trong DB
     if (this.isTemplateMode) return;
@@ -15863,58 +16096,9 @@ QUY TẮC:
       this._updatePlayButtonState();
     }
 
-    // Clear result entries from _tileCache BEFORE clearing node data
-    const oldResultIds = (dfNode.data.result_file_ids || '').split(',').filter(Boolean);
-    for (const id of oldResultIds) {
-      this._tileCache.delete(id);
-    }
-
-    // Clear Drawflow node data
-    dfNode.data.status = 'pending';
-    dfNode.data.result_file_ids = '';
-    dfNode.data.result_thumbnails = null;
-    dfNode.data.result_file_names = null;
-    dfNode.data.error_message = '';
-    dfNode.data.executed_at = null;
-    // 2026-05-31: prompt + text_extract đều có result_text output cần clear khi reset.
-    if (dfNode.data.node_type === 'prompt' || dfNode.data.node_type === 'text_extract') {
-      dfNode.data.result_text = '';
-      dfNode.data.result_source = '';
-      // Clear _extract_failed flag — re-run sau reset sẽ tự set lại nếu cần
-      delete dfNode.data._extract_failed;
-      delete dfNode.data._extract_reason;
-    }
-
-    // CRITICAL: Commit changes to Drawflow internal state
-    // Without this, exportWorkflow() will export stale data (status still 'completed')
-    this.diagramCanvas.editor.updateNodeDataFromId(drawflowId, dfNode.data);
-
-    // Also update workflow.nodes if found
-    if (node) {
-      node.status = 'pending';
-      node.result_file_ids = '';
-      node.result_thumbnails = null;
-      node.result_file_names = null;
-      node.error_message = '';
-      node.executed_at = null;
-      if (node.node_type === 'prompt' || node.node_type === 'text_extract') {
-        node.result_text = '';
-        node.result_source = '';
-        delete node._extract_failed;
-        delete node._extract_reason;
-      }
-    }
-
-    // Update node status UI on canvas
-    this._updateNodeStatusUI(actualNodeId, 'pending');
-
-    // Clear node preview on canvas
-    this._clearNodePreview(actualNodeId);
-
-    // 2026-05-31: prompt + text_extract — remove result preview (helper xử lý cả 2 selectors).
-    if (dfNode.data.node_type === 'prompt' || dfNode.data.node_type === 'text_extract') {
-      this._clearPromptNodeResultPreview(actualNodeId);
-    }
+    // Xoá dữ liệu node — dùng chung với _resetNodeAndDownstream() để hai đường
+    // reset không bao giờ lệch nhau khi sau này thêm trường kết quả mới.
+    this._resetNodeDataOnly(drawflowId);
 
     // Wait for any concurrent save to finish before starting our save
     if (this._isSaving) {
